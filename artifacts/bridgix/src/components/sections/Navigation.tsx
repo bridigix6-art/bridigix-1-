@@ -1,26 +1,6 @@
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
-
-function BridgixLogoMark({ size = 22 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2L14.5 4.5L17 3L18.5 5.5L21 5.5L21 8.5L23 10L21.5 12L23 14L21 15.5L21 18.5L18.5 18.5L17 21L14.5 19.5L12 22L9.5 19.5L7 21L5.5 18.5L3 18.5L3 15.5L1 14L2.5 12L1 10L3 8.5L3 5.5L5.5 5.5L7 3L9.5 4.5Z"
-        stroke="#1A7A4A" strokeWidth="1.5" fill="none" strokeLinejoin="round" strokeLinecap="round"/>
-      <circle cx="12" cy="12" r="3" stroke="#1A7A4A" strokeWidth="1.5" fill="none"/>
-    </svg>
-  );
-}
-
-function BridgixLogo() {
-  return (
-    <div className="flex items-center gap-2.5">
-      <BridgixLogoMark size={22} />
-      <span className="font-medium text-[18px] text-[#0A0A0A] tracking-[-0.02em]" style={{ fontFamily: "'Inter', sans-serif" }}>
-        Bridgix
-      </span>
-    </div>
-  );
-}
+import logoImage from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
 
 export function Navigation() {
   const [scrolled, setScrolled] = useState(false);
@@ -41,13 +21,17 @@ export function Navigation() {
   const navLinks = [
     { name: "How it works", href: "#how-it-works" },
     { name: "Vetting", href: "#vetting" },
-    { name: "Why Bridgix", href: "#why-bridgix" },
+    { name: "Why Bridigix", href: "#why-bridgix" },
     { name: "FAQ", href: "#faq" },
   ];
 
+  const scrollToTop = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <>
-      {/* Scroll progress bar */}
       <div
         style={{
           position: "fixed", top: 0, left: 0, height: "2px", zIndex: 9999,
@@ -57,15 +41,14 @@ export function Navigation() {
         }}
       />
 
-      {/* Nav — always centered, only visual properties animate */}
       <nav
         style={{
           position: "fixed",
           zIndex: 50,
           left: "50%",
           transform: "translateX(-50%)",
-          width: scrolled ? "min(780px, calc(100vw - 40px))" : "100%",
-          top: scrolled ? "14px" : "0px",
+          width: scrolled ? "min(760px, calc(100vw - 40px))" : "100%",
+          top: scrolled ? "12px" : "0px",
           transition: "width 0.65s cubic-bezier(0.4, 0, 0.2, 1), top 0.65s cubic-bezier(0.4, 0, 0.2, 1)",
           willChange: "width, top",
         }}
@@ -73,12 +56,12 @@ export function Navigation() {
         <div
           style={{
             borderRadius: scrolled ? "100px" : "0px",
-            border: scrolled ? "1px solid rgba(0,0,0,0.09)" : "1px solid transparent",
-            backdropFilter: scrolled ? "blur(18px)" : "blur(0px)",
-            WebkitBackdropFilter: scrolled ? "blur(18px)" : "blur(0px)",
-            background: scrolled ? "rgba(255,255,255,0.94)" : "transparent",
+            border: scrolled ? "1px solid rgba(0,0,0,0.07)" : "1px solid transparent",
+            backdropFilter: scrolled ? "blur(20px)" : "blur(0px)",
+            WebkitBackdropFilter: scrolled ? "blur(20px)" : "blur(0px)",
+            background: scrolled ? "rgba(255,255,255,0.96)" : "transparent",
             boxShadow: scrolled
-              ? "0 4px 28px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04), inset 0 0 0 1px rgba(255,255,255,0.6)"
+              ? "0 2px 20px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.03), inset 0 0 0 1px rgba(255,255,255,0.6)"
               : "none",
             transition: [
               "border-radius 0.65s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -94,15 +77,21 @@ export function Navigation() {
             style={{
               maxWidth: scrolled ? "none" : "1120px",
               margin: "0 auto",
-              padding: scrolled ? "11px 22px" : "16px 40px",
+              padding: scrolled ? "8px 18px" : "14px 40px",
               transition: "padding 0.65s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.65s cubic-bezier(0.4, 0, 0.2, 1)",
             }}
           >
-            <a href="#" className="flex-shrink-0">
-              <BridgixLogo />
+            <a href="#" onClick={scrollToTop} className="flex-shrink-0 flex items-center gap-2.5">
+              <img
+                src={logoImage}
+                alt="Bridigix"
+                style={{ width: scrolled ? 26 : 28, height: scrolled ? 26 : 28, objectFit: "contain", transition: "width 0.3s, height 0.3s" }}
+              />
+              <span className="font-medium text-[17px] text-[#0A0A0A] tracking-[-0.02em]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                Bridigix
+              </span>
             </a>
 
-            {/* Desktop Nav */}
             <div className="hidden md:flex items-center gap-7">
               {navLinks.map((link) => (
                 <a
@@ -117,24 +106,22 @@ export function Navigation() {
             </div>
 
             <div className="hidden md:flex items-center gap-3">
-              {/* Small icon mark accent */}
-              <div style={{ opacity: scrolled ? 0 : 0, transition: "opacity 0.3s" }}>
-                <BridgixLogoMark size={18} />
-              </div>
               <button
-                className="text-white font-normal text-[13px] py-[9px] px-[18px] transition-all duration-200 cursor-pointer"
+                className="text-white font-normal text-[13px] cursor-pointer"
                 style={{
                   borderRadius: "100px",
                   background: "linear-gradient(135deg, #1A7A4A, #155E39)",
-                  boxShadow: "0 2px 12px rgba(26,122,74,0.25)",
+                  boxShadow: "0 2px 10px rgba(26,122,74,0.22)",
                   fontFamily: "'Inter', sans-serif",
+                  padding: scrolled ? "7px 16px" : "9px 18px",
+                  transition: "padding 0.3s",
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.boxShadow = "0 4px 20px rgba(26,122,74,0.42)";
+                  e.currentTarget.style.boxShadow = "0 4px 18px rgba(26,122,74,0.4)";
                   e.currentTarget.style.transform = "translateY(-1px)";
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.boxShadow = "0 2px 12px rgba(26,122,74,0.25)";
+                  e.currentTarget.style.boxShadow = "0 2px 10px rgba(26,122,74,0.22)";
                   e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
@@ -142,22 +129,25 @@ export function Navigation() {
               </button>
             </div>
 
-            {/* Mobile Toggle */}
             <button
               className="md:hidden p-2 text-[#0A0A0A] cursor-pointer"
               onClick={() => setMobileMenuOpen(true)}
             >
-              <Menu size={22} strokeWidth={1.5} />
+              <Menu size={20} strokeWidth={1.5} />
             </button>
           </div>
         </div>
       </nav>
 
-      {/* Mobile Overlay Nav */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-[100] bg-white flex flex-col p-6">
           <div className="flex items-center justify-between mb-12">
-            <BridgixLogo />
+            <a href="#" onClick={e => { scrollToTop(e); setMobileMenuOpen(false); }} className="flex items-center gap-2.5">
+              <img src={logoImage} alt="Bridigix" style={{ width: 26, height: 26, objectFit: "contain" }} />
+              <span className="font-medium text-[17px] text-[#0A0A0A] tracking-[-0.02em]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                Bridigix
+              </span>
+            </a>
             <button onClick={() => setMobileMenuOpen(false)} className="p-2 text-[#0A0A0A] cursor-pointer">
               <X size={22} strokeWidth={1.5} />
             </button>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navigation } from "@/components/sections/Navigation";
 import { useLocation } from "wouter";
-import bridgixLogo from "@assets/logo-original_1780481869651.jpg";
+import bridgixLogo from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
 
 const ROLES = [
   "Select your primary role",
@@ -452,12 +452,12 @@ export default function JoinPage() {
                   onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "#FFFFFF"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "rgba(255,255,255,0.75)"; }}
                 >
-                  ← Back to Bridgix
+                  ← Back to Bridigix
                 </button>
                 <span style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "rgba(255,255,255,0.30)" }}>
                   Questions?{" "}
-                  <a href="mailto:hareem@bridgix.org" style={{ color: "#34D399", textDecoration: "underline", textUnderlineOffset: 2 }}>
-                    hareem@bridgix.org
+                  <a href="mailto:hareem@bridigix.org" style={{ color: "#34D399", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                    hareem@bridigix.org
                   </a>
                 </span>
               </motion.div>
@@ -475,6 +475,25 @@ export default function JoinPage() {
       <main className="pt-[110px] pb-[80px] px-4">
         <div className="max-w-[860px] mx-auto">
 
+          {/* Back button */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} className="mb-6">
+            <button
+              onClick={() => navigate("/")}
+              className="flex items-center gap-2 cursor-pointer transition-all duration-200"
+              style={{
+                background: "none", border: "none", padding: "6px 0",
+                fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#6B6B6B",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = "#0A0A0A"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "#6B6B6B"; }}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Back
+            </button>
+          </motion.div>
+
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -483,7 +502,7 @@ export default function JoinPage() {
             className="text-center mb-10"
           >
             <h1 className="text-[36px] font-semibold text-[#0A0A0A] tracking-[-0.04em] mb-3 leading-[1.1]" style={{ fontFamily: "'Inter', sans-serif" }}>
-              Join the Bridgix Network
+              Join the Bridigix Network
             </h1>
             <p className="text-[15px] text-[#6B6B6B] font-light leading-[1.65]" style={{ fontFamily: "'Inter', sans-serif" }}>
               We only work with the top 5%. Apply and we'll be in touch within 48 hours.

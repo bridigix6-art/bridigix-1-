@@ -178,7 +178,7 @@ export function TalentModal({ open, onClose }: TalentModalProps) {
                 <div className="flex flex-col items-center mb-8">
                   <BridgixMark size={36} />
                   <h2 className="mt-4 text-[24px] font-semibold text-[#0A0A0A] text-center" style={{ letterSpacing: "-0.03em" }}>
-                    Join the Bridgix Network
+                    Join the Bridigix Network
                   </h2>
                   <p className="mt-2 text-[14px] text-[#6B6B6B] text-center leading-[1.6] max-w-[380px]">
                     We only work with the top 5%. Apply and we'll be in touch within 48 hours.

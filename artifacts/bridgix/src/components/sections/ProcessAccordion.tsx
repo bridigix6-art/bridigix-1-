@@ -5,19 +5,18 @@ import jessicaPhoto from "@assets/pexels-jessica-stefany-m-1002024697-31512052_1
 import nanaPhoto from "@assets/pexels-nana-qwacy-listowell-249813867-19098114_1780456563486.jpg";
 import augustoPhoto from "@assets/pexels-augustocarneirojr-30468636_1780456563501.jpg";
 import jonathanPhoto from "@assets/pexels-salvador-olague-682304070-18032391_1780481869516.jpg";
-import bridgixLogo from "@assets/logo-original_1780481869651.jpg";
-
-/* ─── Mockup Components (light theme) ─── */
+import hennaPhoto from "@assets/pexels-mikhail-nilov-8730389_1780508877001_1780625194226.jpg";
+import bridgixLogo from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
 
 function ChatMockup() {
   return (
     <div className="h-full flex flex-col rounded-[14px] overflow-hidden" style={{ background: "#FAFAF8", border: "1px solid #EBEBEA" }}>
       <div className="flex items-center gap-2.5 px-4 py-3 flex-shrink-0" style={{ borderBottom: "1px solid #EBEBEA", background: "#FFFFFF" }}>
         <div className="w-[28px] h-[28px] rounded-full overflow-hidden flex-shrink-0 border border-[#E8E8E8]">
-          <img src={bridgixLogo} alt="Bridgix" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={bridgixLogo} alt="Bridigix" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
         </div>
         <div className="flex-1 min-w-0">
-          <span className="text-[11px] font-medium block text-[#0A0A0A]">Bridgix</span>
+          <span className="text-[11px] font-medium block text-[#0A0A0A]">Bridigix</span>
           <div className="flex items-center gap-1">
             <div className="w-[5px] h-[5px] rounded-full bg-[#1A7A4A]" />
             <span className="text-[9px] text-[#6B6B6B]">Active now</span>
@@ -27,10 +26,10 @@ function ChatMockup() {
       <div className="flex-1 px-4 py-4 flex flex-col gap-3 overflow-hidden">
         <div className="flex gap-2 items-start">
           <div className="w-[20px] h-[20px] rounded-full overflow-hidden flex-shrink-0 mt-0.5 border border-[#E8E8E8]">
-            <img src={bridgixLogo} alt="Bridgix" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img src={bridgixLogo} alt="Bridigix" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
           </div>
           <div className="rounded-[10px_10px_10px_3px] px-3 py-2.5 max-w-[78%]" style={{ background: "#F0F0EE", border: "1px solid #E8E8E8" }}>
-            <p className="text-[10px] leading-[1.6] text-[#3D3D3D]">What role are you hiring for, and what's the core stack?</p>
+            <p className="text-[10px] leading-[1.6] text-[#3D3D3D]">Tell me a bit about what you're building — what does your company do?</p>
           </div>
         </div>
         <div className="flex gap-2 items-start justify-end">
@@ -43,7 +42,7 @@ function ChatMockup() {
         </div>
         <div className="flex gap-2 items-start">
           <div className="w-[20px] h-[20px] rounded-full overflow-hidden flex-shrink-0 mt-0.5 border border-[#E8E8E8]">
-            <img src={bridgixLogo} alt="Bridgix" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img src={bridgixLogo} alt="Bridigix" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
           </div>
           <div className="rounded-[10px_10px_10px_3px] px-3 py-2.5 max-w-[82%]" style={{ background: "#F0F0EE", border: "1px solid #E8E8E8" }}>
             <p className="text-[10px] leading-[1.6] text-[#3D3D3D]">Got it — have you tried hiring for this role before? What went wrong?</p>
@@ -51,7 +50,7 @@ function ChatMockup() {
         </div>
         <div className="flex gap-2 items-center">
           <div className="w-[20px] h-[20px] rounded-full overflow-hidden flex-shrink-0 border border-[#E8E8E8]">
-            <img src={bridgixLogo} alt="Bridgix" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img src={bridgixLogo} alt="Bridigix" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
           </div>
           <div className="flex items-center gap-1.5 px-3 py-2 rounded-[10px_10px_10px_3px]" style={{ background: "#F0F0EE", border: "1px solid #E8E8E8" }}>
             {[0, 1, 2].map(i => (
@@ -78,7 +77,7 @@ function NetworkSearchMockup() {
   const candidates = [
     { photo: nanaPhoto, name: "James K.", role: "Senior Backend Eng.", skills: ["Go", "AWS", "Postgres"], match: 94, color: "#1A7A4A", bar: "linear-gradient(90deg, #1A7A4A, #34D399)" },
     { photo: jessicaPhoto, name: "Sofia F.", role: "Full-Stack Engineer", skills: ["React", "Node.js", "TypeScript"], match: 91, color: "#8B5CF6", bar: "linear-gradient(90deg, #8B5CF6, #A78BFA)" },
-    { photo: augustoPhoto, name: "Muhammad K.", role: "Backend · Go Specialist", skills: ["Go", "gRPC", "Redis"], match: 88, color: "#F472B6", bar: "linear-gradient(90deg, #F472B6, #F5C518)" },
+    { photo: hennaPhoto, name: "Henna M.", role: "Backend · Go Specialist", skills: ["Go", "gRPC", "Redis"], match: 88, color: "#F472B6", bar: "linear-gradient(90deg, #F472B6, #F5C518)" },
   ];
   return (
     <div className="h-full flex flex-col rounded-[14px] overflow-hidden" style={{ background: "#FAFAF8", border: "1px solid #EBEBEA" }}>
@@ -172,16 +171,16 @@ function ShortlistMockup() {
   const profiles = [
     { photo: nanaPhoto, name: "James K.", role: "Backend Engineer", tags: ["Go", "AWS"], accent: "#1A7A4A", bar: "linear-gradient(90deg,#1A7A4A,#34D399)" },
     { photo: jessicaPhoto, name: "Sofia F.", role: "Full-Stack Eng.", tags: ["React", "Node"], accent: "#8B5CF6", bar: "linear-gradient(90deg,#8B5CF6,#A78BFA)" },
-    { photo: augustoPhoto, name: "Muhammad K.", role: "Backend · Go", tags: ["Go", "gRPC"], accent: "#F472B6", bar: "linear-gradient(90deg,#F472B6,#F5C518)" },
+    { photo: hennaPhoto, name: "Henna M.", role: "Backend · Go", tags: ["Go", "gRPC"], accent: "#F472B6", bar: "linear-gradient(90deg,#F472B6,#F5C518)" },
   ];
   return (
     <div className="h-full flex flex-col rounded-[14px] overflow-hidden" style={{ background: "#FAFAF8", border: "1px solid #EBEBEA" }}>
       <div className="px-4 pt-3.5 pb-3 flex-shrink-0" style={{ borderBottom: "1px solid #EBEBEA", background: "#FFFFFF" }}>
         <div className="flex items-center gap-2 mb-2">
           <div className="w-[18px] h-[18px] rounded-full overflow-hidden flex-shrink-0 border border-[#E8E8E8]">
-            <img src={bridgixLogo} alt="Bridgix" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img src={bridgixLogo} alt="Bridigix" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
           </div>
-          <span className="text-[9px] text-[#6B6B6B]">hareem@bridgix.org</span>
+          <span className="text-[9px] text-[#6B6B6B]">hareem@bridigix.org</span>
           <span className="text-[8px] ml-auto px-1.5 py-0.5 rounded-full" style={{ background: "rgba(245,200,66,0.15)", color: "#d97706" }}>72hr ⚡</span>
         </div>
         <p className="text-[11px] font-medium text-[#0A0A0A]">Your Engineer Shortlist — 3 Matched Profiles</p>
@@ -300,7 +299,6 @@ function GuaranteeMockup() {
   );
 }
 
-/* ─── Step Data ─── */
 const steps = [
   {
     title: "Tell us what you're building",
@@ -351,13 +349,11 @@ export function ProcessAccordion() {
       style={{ scrollMarginTop: "80px", background: "#F8F8F6" }}
       ref={ref as React.RefObject<HTMLDivElement>}
     >
-      {/* Section accent top */}
       <div className="absolute top-0 left-0 right-0 h-px" style={{
         background: "linear-gradient(90deg, transparent, rgba(26,122,74,0.18), rgba(52,211,153,0.12), transparent)",
       }} />
 
       <div className="max-w-[1120px] mx-auto relative">
-        {/* Section Heading */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -369,12 +365,10 @@ export function ProcessAccordion() {
             className="text-[clamp(28px,3.2vw,42px)] tracking-[-0.04em] text-[#0A0A0A] leading-[1.08]"
             style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300 }}
           >
-            How Bridgix Works
+            How Bridigix Works
           </h2>
         </motion.div>
 
-
-        {/* Accordion layout */}
         <div className="flex flex-col gap-2">
           {steps.map((step, i) => {
             const isOpen = openStep === i;
@@ -385,23 +379,21 @@ export function ProcessAccordion() {
                 layout
                 initial={{ opacity: 0, y: 12 }}
                 animate={isInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.5, delay: 0.1 + i * 0.06, layout: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } }}
+                transition={{ duration: 0.5, delay: 0.1 + i * 0.06, layout: { duration: 0.45, ease: [0.4, 0, 0.2, 1] } }}
                 style={{
                   borderRadius: "16px",
                   border: `1px solid ${isOpen ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.06)"}`,
-                  background: isOpen ? "#FFFFFF" : "#FFFFFF",
+                  background: "#FFFFFF",
                   boxShadow: isOpen ? "0 8px 32px rgba(0,0,0,0.07)" : "0 1px 6px rgba(0,0,0,0.04)",
                   overflow: "hidden",
-                  transition: "box-shadow 0.3s ease, border-color 0.3s ease",
+                  transition: "box-shadow 0.35s ease, border-color 0.35s ease",
                 }}
               >
-                {/* Step heading button */}
                 <button
                   onClick={() => setOpenStep(isOpen ? null : i)}
                   className="w-full flex items-center gap-5 px-6 py-5 text-left cursor-pointer group"
                   style={{ background: "none", border: "none" }}
                 >
-                  {/* Step number */}
                   <span
                     style={{
                       width: 28, height: 28, borderRadius: "50%",
@@ -412,7 +404,7 @@ export function ProcessAccordion() {
                       fontWeight: 600,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       flexShrink: 0,
-                      transition: "all 0.25s ease",
+                      transition: "all 0.3s ease",
                       boxShadow: isOpen ? "0 2px 8px rgba(26,122,74,0.25)" : "none",
                     }}
                   >
@@ -425,78 +417,79 @@ export function ProcessAccordion() {
                       fontFamily: "'Inter', sans-serif",
                       fontWeight: 400,
                       color: isOpen ? "#0A0A0A" : "#3D3D3D",
-                      transition: "color 0.25s ease",
-                      textShadow: isOpen ? "0 1px 8px rgba(0,0,0,0.04)" : "none",
+                      transition: "color 0.3s ease",
                     }}
                   >
                     {step.title}
                   </h3>
 
-                  <div
+                  <span
+                    className="hidden md:block text-[11px] font-normal px-3 py-1.5 rounded-full flex-shrink-0 transition-all duration-300"
                     style={{
-                      width: 26, height: 26, borderRadius: "50%",
-                      border: "1px solid rgba(0,0,0,0.10)",
-                      background: "#FFFFFF",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      flexShrink: 0,
-                      transform: isOpen ? "rotate(45deg)" : "rotate(0deg)",
-                      transition: "transform 0.3s ease",
+                      background: isOpen ? "rgba(26,122,74,0.08)" : "#F5F5F3",
+                      color: isOpen ? "#1A7A4A" : "#8A8A8A",
+                      border: `1px solid ${isOpen ? "rgba(26,122,74,0.15)" : "transparent"}`,
+                      fontFamily: "'Inter', sans-serif",
                     }}
                   >
-                    <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
-                      <path d="M8 2V14M14 8H2" stroke="#6B6B6B" strokeWidth="2" strokeLinecap="round"/>
+                    {step.badge}
+                  </span>
+
+                  <motion.div
+                    animate={{ rotate: isOpen ? 45 : 0 }}
+                    transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                    style={{
+                      width: 22, height: 22, borderRadius: "50%",
+                      background: isOpen ? "#1A7A4A" : "#F0F0EE",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0,
+                      color: isOpen ? "white" : "#6B6B6B",
+                      transition: "background 0.3s ease, color 0.3s ease",
+                    }}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                      <path d="M6 2V10M2 6H10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                     </svg>
-                  </div>
+                  </motion.div>
                 </button>
 
-                {/* Expanded content */}
-                <AnimatePresence>
+                {/* Smooth content reveal */}
+                <AnimatePresence initial={false}>
                   {isOpen && (
                     <motion.div
+                      key="content"
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+                      transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
                       style={{ overflow: "hidden" }}
                     >
-                      <div className="px-6 pb-6">
-                        {/* Divider */}
-                        <div style={{ height: 1, background: "rgba(0,0,0,0.05)", marginBottom: 20 }} />
-
-                        <div className="grid grid-cols-1 md:grid-cols-[1fr_340px] gap-8 items-start">
-                          {/* Description */}
-                          <div>
-                            <span
-                              className="inline-block text-[11px] font-normal px-3 py-1.5 rounded-full mb-4"
-                              style={{
-                                background: "rgba(0,0,0,0.05)",
-                                color: "#6B6B6B",
-                                fontFamily: "'Inter', sans-serif",
-                              }}
-                            >
-                              {step.badge}
-                            </span>
-                            <p
-                              className="text-[15px] font-light leading-[1.75] text-[#4A4A4A]"
-                              style={{ fontFamily: "'Inter', sans-serif" }}
-                            >
-                              {step.body}
-                            </p>
-                          </div>
-
-                          {/* Mockup */}
-                          <div
-                            className="rounded-[14px] overflow-hidden"
+                      <div className="flex flex-col md:flex-row gap-8 px-6 pb-8">
+                        <div className="flex-1 min-w-0">
+                          <div className="h-px w-full mb-6" style={{ background: "rgba(0,0,0,0.06)" }} />
+                          <p
+                            className="text-[15px] leading-[1.75] mb-6"
+                            style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300, color: "#4A4A4A" }}
+                          >
+                            {step.body}
+                          </p>
+                          <span
+                            className="inline-flex text-[12px] font-medium px-3 py-1.5 rounded-full"
                             style={{
-                              height: 300,
-                              border: "1px solid #EBEBEA",
-                              boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
+                              background: "rgba(26,122,74,0.08)",
+                              color: "#1A7A4A",
+                              border: "1px solid rgba(26,122,74,0.14)",
+                              fontFamily: "'Inter', sans-serif",
                             }}
                           >
-                            <div className="h-full p-3">
-                              <step.Mockup />
-                            </div>
-                          </div>
+                            {step.badge}
+                          </span>
+                        </div>
+                        <div
+                          className="flex-shrink-0 w-full md:w-[340px] rounded-[16px] overflow-hidden"
+                          style={{ height: 280, border: "1px solid rgba(0,0,0,0.06)" }}
+                        >
+                          <step.Mockup />
                         </div>
                       </div>
                     </motion.div>

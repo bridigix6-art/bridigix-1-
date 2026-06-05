@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { useInView } from "../../hooks/use-in-view";
 import { ChatModal } from "../modals/ChatModal";
 import jonathanPhoto from "@assets/pexels-salvador-olague-682304070-18032391_1780481869516.jpg";
-import hennaPhoto from "@assets/pexels-mikhail-nilov-8730389_1780541934950.jpg";
+import hennaPhoto from "@assets/pexels-mikhail-nilov-8730389_1780508877001_1780625194226.jpg";
 import sofiaPhoto from "@assets/pexels-jessica-stefany-m-1002024697-31512052_1780456563453.jpg";
 import blobSticker from "@assets/gradient-colors-with-blurry-effect-abstract-shape-element-png__1780481869559.jpg";
 
@@ -78,7 +78,6 @@ export function Hero() {
           borderBottom: "1px solid rgba(0,0,0,0.04)",
         }}
       >
-        {/* Dot grid background */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -90,7 +89,6 @@ export function Hero() {
           }}
         />
 
-        {/* Gradient orbs */}
         <div className="absolute pointer-events-none" style={{
           top: "-60px", right: "-40px", width: 500, height: 500,
           background: "radial-gradient(circle, rgba(52,211,153,0.09) 0%, rgba(26,122,74,0.06) 45%, transparent 70%)",
@@ -108,7 +106,6 @@ export function Hero() {
 
         <div className="relative w-full max-w-[1120px] mx-auto grid grid-cols-1 md:grid-cols-[55%_45%] gap-8 md:gap-4 items-center">
 
-          {/* Left Column */}
           <div className="flex flex-col items-start">
             <motion.h1
               initial={{ opacity: 0, y: 18 }}
@@ -136,7 +133,6 @@ export function Hero() {
               A faster, more considered way to hire. Through carefully vetted engineers, personal matching, and a process designed around founders who can't afford to get this wrong.
             </motion.p>
 
-            {/* CTAs */}
             <motion.div
               initial={{ opacity: 0, y: 14 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -191,7 +187,6 @@ export function Hero() {
               </button>
             </motion.div>
 
-            {/* Stats */}
             <motion.div
               initial={{ opacity: 0, y: 14 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -234,9 +229,7 @@ export function Hero() {
             </motion.div>
           </div>
 
-          {/* Right Column — Cards clustered around blob */}
           <div className="relative w-full hidden md:block" style={{ height: "390px" }}>
-            {/* Blob */}
             <div
               className="absolute pointer-events-none select-none"
               style={{

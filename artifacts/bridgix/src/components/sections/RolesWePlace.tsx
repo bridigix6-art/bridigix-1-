@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useInView } from "../../hooks/use-in-view";
-import halftoneImage from "@assets/Screenshot_2026-06-02-12-14-14-817_com.android.chrome-edit_1780541934964.jpg";
+import halftoneImage from "@assets/halftone-bg_1780625194240.jpg";
 
 const roles = [
   { label: "Backend Engineers" },
@@ -15,7 +15,6 @@ const roles = [
   { label: "Founding Engineers" },
 ];
 
-// Scattered layout: 4 rows with natural offsets and slight y-variation per pill
 const layout: { roles: string[]; xOffset: number; rowYOffset: number[] }[] = [
   {
     roles: ["Backend Engineers", "Frontend Engineers", "Full Stack Engineers"],
@@ -50,22 +49,21 @@ export function RolesWePlace() {
       ref={ref as React.RefObject<HTMLDivElement>}
       style={{ scrollMarginTop: "80px" }}
     >
-      {/* Base dark background */}
       <div className="absolute inset-0" style={{ background: "#0B0F0C" }} />
 
-      {/* Halftone image background */}
+      {/* Exact halftone image as background */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage: `url(${halftoneImage})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          opacity: 0.08,
+          backgroundRepeat: "no-repeat",
+          opacity: 0.18,
           mixBlendMode: "screen",
         }}
       />
 
-      {/* Subtle green radial at top */}
       <div className="absolute pointer-events-none" style={{
         top: "-60px", left: "50%", transform: "translateX(-50%)",
         width: 800, height: 300,
@@ -73,7 +71,6 @@ export function RolesWePlace() {
         filter: "blur(50px)",
       }} />
 
-      {/* Gradient lines */}
       <div className="absolute top-0 left-0 right-0 h-px" style={{
         background: "linear-gradient(90deg, transparent, rgba(52,211,153,0.25), rgba(26,122,74,0.18), transparent)",
       }} />
@@ -96,7 +93,6 @@ export function RolesWePlace() {
           </h2>
         </motion.div>
 
-        {/* Scattered layout */}
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}

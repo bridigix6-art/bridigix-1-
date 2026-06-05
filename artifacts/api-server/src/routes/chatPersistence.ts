@@ -1,26 +1,9 @@
 import { Router } from "express";
-import fs from "fs";
-import path from "path";
+import { supabase } from "../lib/supabase";
 
 const router = Router();
 
-const CHATS_FILE = path.join(process.cwd(), "chats.json");
-
-function readChats(): Record<string, { messages: Array<{ role: string; content: string }>; updatedAt: string }> {
-  try {
-    if (!fs.existsSync(CHATS_FILE)) return {};
-    const raw = fs.readFileSync(CHATS_FILE, "utf-8");
-    return JSON.parse(raw);
-  } catch {
-    return {};
-  }
-}
-
-function writeChats(data: Record<string, { messages: Array<{ role: string; content: string }>; updatedAt: string }>) {
-  fs.writeFileSync(CHATS_FILE, JSON.stringify(data, null, 2), "utf-8");
-}
-
-router.post("/save-chat", (req, res) => {
+router.post("/save-chat", async (req, res) => {
   try {
     const { email, messages } = req.body as {
       email: string;
@@ -32,12 +15,31 @@ router.post("/save-chat", (req, res) => {
       return;
     }
 
-    const chats = readChats();
-    chats[email.toLowerCase().trim()] = {
-      messages,
-      updatedAt: new Date().toISOString(),
-    };
-    writeChats(chats);
+    const normalizedEmail = email.toLowerCase().trim();
+    const ipAddress = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
+      || req.socket.remoteAddress
+      || "";
+    const userAgent = req.headers["user-agent"] ?? "";
+
+    const { error } = await supabase
+      .from("chat_conversations")
+      .upsert(
+        {
+          email: normalizedEmail,
+          messages,
+          ip_address: ipAddress,
+          user_agent: userAgent,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "email" }
+      );
+
+    if (error) {
+      req.log.error({ error }, "Supabase save-chat error");
+      res.status(500).json({ error: "Failed to save chat" });
+      return;
+    }
+
     res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Save chat error");
@@ -45,7 +47,7 @@ router.post("/save-chat", (req, res) => {
   }
 });
 
-router.get("/load-chat", (req, res) => {
+router.get("/load-chat", async (req, res) => {
   try {
     const email = (req.query["email"] as string | undefined)?.toLowerCase().trim();
 
@@ -54,18 +56,60 @@ router.get("/load-chat", (req, res) => {
       return;
     }
 
-    const chats = readChats();
-    const chat = chats[email];
+    const { data, error } = await supabase
+      .from("chat_conversations")
+      .select("messages")
+      .eq("email", email)
+      .single();
 
-    if (!chat) {
+    if (error || !data) {
       res.json({ messages: null });
       return;
     }
 
-    res.json({ messages: chat.messages });
+    res.json({ messages: data.messages });
   } catch (err) {
     req.log.error({ err }, "Load chat error");
     res.status(500).json({ error: "Failed to load chat" });
+  }
+});
+
+router.post("/save-application", async (req, res) => {
+  try {
+    const { name, email, formData } = req.body as {
+      name: string;
+      email: string;
+      formData: Record<string, unknown>;
+    };
+
+    if (!email) {
+      res.status(400).json({ error: "email is required" });
+      return;
+    }
+
+    const ipAddress = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
+      || req.socket.remoteAddress
+      || "";
+
+    const { error } = await supabase
+      .from("join_applications")
+      .insert({
+        name,
+        email: email.toLowerCase().trim(),
+        form_data: formData,
+        ip_address: ipAddress,
+      });
+
+    if (error) {
+      req.log.error({ error }, "Supabase save-application error");
+      res.status(500).json({ error: "Failed to save application" });
+      return;
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Save application error");
+    res.status(500).json({ error: "Failed to save application" });
   }
 });
 

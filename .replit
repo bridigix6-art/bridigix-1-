@@ -39,3 +39,6 @@ externalPort = 80
 
 [userenv.shared]
 GROQ_API_KEY = "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"
+SUPABASE_URL = "https://jpaiwfswodjsvdgzynyl.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwYWl3ZnN3b2Rqc3ZkZ3p5bnlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MDUyNTYsImV4cCI6MjA5NjE4MTI1Nn0.K71sxGIMqbe879tSGpAVCiwMF-JlLeSqcD3WqI2x-tQ"
+ADMIN_PASSWORD = "bridigix2025admin"

@@ -88,7 +88,7 @@ export function PartnerIntro() {
           >
             The hardest part of hiring isn't finding people<br />
             it's knowing who belongs on your team<span style={{ fontSize: "0.6em", verticalAlign: "super", opacity: 0.4 }}>.</span><br />
-            Bridgix takes that weight off your plate
+            Bridigix takes that weight off your plate
             <span style={{ fontSize: "0.6em", verticalAlign: "super", opacity: 0.4 }}>.</span>
           </p>
         </motion.div>

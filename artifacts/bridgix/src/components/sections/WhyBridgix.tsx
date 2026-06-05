@@ -61,7 +61,7 @@ const cells = [
   },
   {
     title: "Founder-Built Thinking",
-    body: "We built Bridgix inside the same pressure founders live in. That is why everything we do removes friction, not adds process.",
+    body: "We built Bridigix inside the same pressure founders live in. That is why everything we do removes friction, not adds process.",
     borderGrad: "linear-gradient(135deg, #F5C518 0%, #34D399 40%, #1A7A4A 100%)",
     glowColor: "rgba(245,200,66,0.08)",
     dotColor: "#1A7A4A",
@@ -89,9 +89,7 @@ function TimelineCard({ cell, index, isInView }: { cell: typeof cells[0]; index:
       className={`flex items-center gap-0 w-full ${isLeft ? "flex-row" : "flex-row-reverse"}`}
       style={{ transform: `translateY(${cell.yOffset}px)` }}
     >
-      {/* Card */}
       <div style={{ width: cell.widthFactor, flexShrink: 0 }}>
-        {/* Gradient border wrapper */}
         <div style={{
           padding: "1px",
           borderRadius: "20px",
@@ -115,16 +113,13 @@ function TimelineCard({ cell, index, isInView }: { cell: typeof cells[0]; index:
               boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
             }}
           >
-            {/* Top gradient accent bar */}
             <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: cell.topBar }} />
 
-            {/* Hover glow bg */}
             <div
               className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-400 rounded-[19px]"
               style={{ background: `radial-gradient(circle at ${isLeft ? "80%" : "20%"} 80%, ${cell.glowColor}, transparent 65%)` }}
             />
 
-            {/* Icon + title row */}
             <div className="relative z-10 flex items-start gap-3 mb-4">
               <div
                 className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center flex-shrink-0"
@@ -150,7 +145,6 @@ function TimelineCard({ cell, index, isInView }: { cell: typeof cells[0]; index:
         </div>
       </div>
 
-      {/* Center timeline dot */}
       <div className="flex flex-col items-center flex-shrink-0 px-8">
         <div style={{
           width: 11, height: 11,
@@ -161,7 +155,6 @@ function TimelineCard({ cell, index, isInView }: { cell: typeof cells[0]; index:
         }} />
       </div>
 
-      {/* Empty side */}
       <div className="flex-1" />
     </motion.div>
   );
@@ -197,7 +190,6 @@ export function WhyBridgix() {
         background: "#FFFFFF",
       }}
     >
-      {/* Dot grid */}
       <div className="absolute inset-0 pointer-events-none" style={{
         backgroundImage: "radial-gradient(circle at 1px 1px, rgba(0,0,0,0.04) 1px, transparent 0)",
         backgroundSize: "36px 36px",
@@ -205,14 +197,13 @@ export function WhyBridgix() {
         maskImage: "linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)",
       }} />
 
-      {/* Subtle gradient overlay */}
       <div className="absolute inset-0 pointer-events-none" style={{
         background: "radial-gradient(ellipse at 50% 0%, rgba(26,122,74,0.03) 0%, transparent 60%), radial-gradient(ellipse at 0% 60%, rgba(245,200,66,0.03) 0%, transparent 50%)",
       }} />
 
       <div className="max-w-[1040px] mx-auto relative">
         <div className="mb-14">
-          <span className="section-label text-[#6B6B6B] block mb-4">Why Bridgix</span>
+          <span className="section-label text-[#6B6B6B] block mb-4">Why Bridigix</span>
           <h2
             className="text-[clamp(32px,3.5vw,48px)] tracking-[-0.04em] text-[#0A0A0A] leading-[1.05]"
           >
@@ -231,9 +222,7 @@ export function WhyBridgix() {
           </h2>
         </div>
 
-        {/* Timeline layout */}
         <div ref={timelineRef} className="relative">
-          {/* Vertical center line with animation */}
           <div className="absolute left-1/2 top-0 pointer-events-none" style={{
             transform: "translateX(-50%)",
             width: "2px",
@@ -243,7 +232,6 @@ export function WhyBridgix() {
             transition: "height 0.08s linear",
           }} />
 
-          {/* Animated progress glow */}
           {isInView && (
             <div className="absolute left-1/2 top-0 pointer-events-none" style={{
               transform: "translateX(-50%)",

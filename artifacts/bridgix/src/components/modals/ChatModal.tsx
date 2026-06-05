@@ -1,15 +1,40 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import logoImage from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
 
 interface Message { role: "user" | "assistant"; content: string; }
 interface ChatModalProps { open: boolean; onClose: () => void; }
 
-const FIRST_MESSAGE = "Hi, nice to have you here. What's your name?";
-const LS_KEY = "bridgix_chat";
+const FIRST_MESSAGE = "Tell me a bit about what you're building — what does your company do?";
+const LS_KEY = "bridigix_chat";
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+const COOKIE_KEY = "bridigix_tz";
+
+function getCookieValue(name: string): string | null {
+  const match = document.cookie.match(new RegExp("(^|;)\\s*" + name + "=([^;]+)"));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
+function setCookie(name: string, value: string, days = 365) {
+  const expires = new Date();
+  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+  document.cookie = `${name}=${encodeURIComponent(value)};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+}
+
+function getOrSetTimezone(): string {
+  const stored = getCookieValue(COOKIE_KEY);
+  if (stored) return stored;
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  setCookie(COOKIE_KEY, tz);
+  return tz;
+}
 
 function getTimeGreeting(): string {
-  const hour = new Date().getHours();
+  const tz = getOrSetTimezone();
+  const now = new Date();
+  const localTimeStr = now.toLocaleTimeString("en-US", { timeZone: tz, hour12: false, hour: "2-digit" });
+  const hour = parseInt(localTimeStr, 10);
+
   if (hour >= 5 && hour < 12) {
     const opts = ["Good morning!", "Morning!", "Morning, mate!"];
     return opts[Math.floor(Math.random() * opts.length)];
@@ -22,21 +47,11 @@ function getTimeGreeting(): string {
   }
 }
 
-function BridgixMark({ size = 24 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M12 2L14.5 4.5L17 3L18.5 5.5L21 5.5L21 8.5L23 10L21.5 12L23 14L21 15.5L21 18.5L18.5 18.5L17 21L14.5 19.5L12 22L9.5 19.5L7 21L5.5 18.5L3 18.5L3 15.5L1 14L2.5 12L1 10L3 8.5L3 5.5L5.5 5.5L7 3L9.5 4.5Z"
-        stroke="#1A7A4A" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
-      <circle cx="12" cy="12" r="3" stroke="#1A7A4A" strokeWidth="1.5"/>
-    </svg>
-  );
-}
-
 function TypingDots() {
   return (
     <div className="flex items-start gap-3">
-      <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(26,122,74,0.08)", border: "1px solid rgba(26,122,74,0.12)" }}>
-        <BridgixMark size={16} />
+      <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "rgba(26,122,74,0.08)", border: "1px solid rgba(26,122,74,0.12)" }}>
+        <img src={logoImage} alt="Bridigix" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
       </div>
       <div
         className="flex items-center gap-1.5"
@@ -78,8 +93,8 @@ function AIBubble({ content, isLatest }: { content: string; isLatest: boolean })
   const text = useTypewriter(content, 14, isLatest);
   return (
     <div className="flex items-start gap-3">
-      <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5" style={{ background: "rgba(26,122,74,0.08)", border: "1px solid rgba(26,122,74,0.12)" }}>
-        <BridgixMark size={16} />
+      <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5 overflow-hidden" style={{ background: "rgba(26,122,74,0.08)", border: "1px solid rgba(26,122,74,0.12)" }}>
+        <img src={logoImage} alt="Bridigix" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
       </div>
       <div style={{
         background: "rgba(26,122,74,0.07)",
@@ -128,7 +143,7 @@ function CompletionPanel() {
       style={{ background: "linear-gradient(135deg, rgba(26,122,74,0.04) 0%, transparent 100%)", borderRadius: 20, border: "1px solid rgba(26,122,74,0.10)" }}
     >
       <div style={{ marginBottom: 16 }}>
-        <BridgixMark size={40} />
+        <img src={logoImage} alt="Bridigix" style={{ width: 40, height: 40, objectFit: "contain" }} />
       </div>
       <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 20, color: "#0A0A0A", marginBottom: 8 }}>
         We're on it.
@@ -146,13 +161,7 @@ function CompletionPanel() {
   );
 }
 
-function RecoveryBar({
-  onLoad,
-  hidden,
-}: {
-  onLoad: (msgs: Message[]) => void;
-  hidden: boolean;
-}) {
+function RecoveryBar({ onLoad, hidden }: { onLoad: (msgs: Message[]) => void; hidden: boolean; }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "loading" | "not_found" | "error">("idle");
   const [toast, setToast] = useState(false);
@@ -249,7 +258,6 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
   useEffect(() => { scrollToBottom(); }, [messages, loading, scrollToBottom]);
 
-  // Check localStorage on open
   useEffect(() => {
     if (!open) {
       setSessionPhase("init");
@@ -273,18 +281,15 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
         }
       }
     } catch { /* ignore */ }
-    // No saved chat → start fresh, show recovery bar
     startFresh();
   }, [open]);
 
-  // Save to localStorage on every message
   useEffect(() => {
     if (messages.length > 0 && sessionPhase === "chat") {
       try { localStorage.setItem(LS_KEY, JSON.stringify(messages)); } catch { /* ignore */ }
     }
   }, [messages, sessionPhase]);
 
-  // Detect email and auto-save to server
   useEffect(() => {
     if (messages.length === 0) return;
     const allText = messages.map(m => m.content).join(" ");
@@ -406,7 +411,6 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.22 }}
         >
-          {/* Top accent bar */}
           <div style={{ height: 3, background: "linear-gradient(90deg, #1A7A4A, #34D399, #F5C518)", flexShrink: 0 }} />
 
           {/* Header */}
@@ -416,13 +420,15 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
           >
             <div className="max-w-[780px] mx-auto px-6 flex items-center justify-between" style={{ height: 64 }}>
               <div className="flex items-center gap-2.5">
-                <BridgixMark size={22} />
+                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ background: "rgba(26,122,74,0.08)", border: "1px solid rgba(26,122,74,0.12)" }}>
+                  <img src={logoImage} alt="Bridigix" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                </div>
                 <div>
                   <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 15, color: "#0A0A0A" }}>
-                    Jordan
+                    Bridigix hiring partner
                   </span>
                   <span style={{ fontFamily: "Inter, sans-serif", fontSize: 12, color: "#6B6B6B", marginLeft: 8 }}>
-                    {loading ? "Thinking..." : "Bridgix Hiring Partner"}
+                    {loading ? "Thinking..." : "Online"}
                   </span>
                 </div>
               </div>
@@ -496,10 +502,52 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto" style={{ scrollBehavior: "smooth" }}>
-            <div className="max-w-[780px] mx-auto px-6 py-8">
+            <div className="max-w-[780px] mx-auto px-6 py-8 flex flex-col h-full">
 
-              {/* Time-of-day greeting heading */}
-              {(showNoConversation || (sessionPhase === "chat" && messages.length > 0 && messages.length <= 2)) && (
+              {/* Centered greeting when no messages */}
+              {showNoConversation && (
+                <div className="flex-1 flex flex-col items-center justify-center text-center">
+                  <motion.h1
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                    style={{
+                      fontFamily: "Inter, sans-serif",
+                      fontWeight: 500,
+                      fontSize: "clamp(32px, 5vw, 52px)",
+                      color: "#0A0A0A",
+                      letterSpacing: "-0.03em",
+                      marginBottom: 16,
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    {greeting}
+                  </motion.h1>
+                  <motion.p
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.1 }}
+                    style={{
+                      fontFamily: "Inter, sans-serif",
+                      fontSize: 16,
+                      color: "#6B6B6B",
+                      fontWeight: 300,
+                      maxWidth: 360,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    Tell us about your role and we'll find you the right engineer in 72 hours.
+                  </motion.p>
+                </div>
+              )}
+
+              {/* Recovery Bar */}
+              {showRecovery && sessionPhase === "chat" && messages.length > 0 && (
+                <RecoveryBar onLoad={handleEmailLoad} hidden={recoveryBarHidden} />
+              )}
+
+              {/* Greeting above first message */}
+              {sessionPhase === "chat" && messages.length > 0 && messages.length <= 2 && (
                 <motion.h1
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -512,15 +560,11 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
                     letterSpacing: "-0.03em",
                     marginBottom: 32,
                     lineHeight: 1.15,
+                    textAlign: "center",
                   }}
                 >
                   {greeting}
                 </motion.h1>
-              )}
-
-              {/* Recovery Bar */}
-              {showRecovery && sessionPhase === "chat" && (
-                <RecoveryBar onLoad={handleEmailLoad} hidden={recoveryBarHidden} />
               )}
 
               {/* Messages */}
@@ -550,7 +594,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
                     value={input}
                     onChange={handleInput}
                     onKeyDown={handleKeyDown}
-                    placeholder="Reply to Jordan..."
+                    placeholder="Reply..."
                     rows={1}
                     style={{
                       flex: 1, border: "1.5px solid #E4E4E2", borderRadius: 14, padding: "14px 18px",
@@ -575,13 +619,13 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
                       transition: "all 0.2s",
                     }}
                   >
-                    <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-                      <path d="M3 13L13 3M13 3H6M13 3V10" stroke={!input.trim() || loading ? "#A0A0A0" : "white"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z" stroke={!input.trim() || loading ? "#B0B0B0" : "white"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </button>
                 </div>
-                <p style={{ fontFamily: "Inter, sans-serif", fontSize: 11, color: "#A0A0A0", marginTop: 8, textAlign: "center" }}>
-                  Jordan · Bridgix Hiring Partner · Press Enter to send
+                <p style={{ fontFamily: "Inter, sans-serif", fontSize: 11, color: "#B0B0B0", marginTop: 8, textAlign: "center" }}>
+                  Bridigix hiring partner · Responses within seconds
                 </p>
               </div>
             </div>
