@@ -149,7 +149,7 @@ function CompletionPanel() {
         We're on it.
       </p>
       <p style={{ fontFamily: "Inter, sans-serif", fontSize: 15, color: "#6B6B6B", lineHeight: 1.65, maxWidth: 320 }}>
-        Expect three matched profiles in your inbox within 72 hours. We'll be in touch.
+        Expect three matched profiles in your inbox within a week. We'll be in touch.
       </p>
       <motion.div
         style={{ width: "100%", maxWidth: 280, height: 3, background: "linear-gradient(90deg, #1A7A4A, #34D399)", borderRadius: 2, marginTop: 24 }}
@@ -357,7 +357,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       const reply: string = data.reply ?? "";
 
       if (reply === "INTAKE_COMPLETE") {
-        const finalMsg = "Perfect. That's everything I need. I'm going into the network now — you'll have a handpicked shortlist in your inbox within 72 hours. Keep an eye out.";
+        const finalMsg = "Perfect. That's everything I need. I'm going into the network now — you'll have a handpicked shortlist in your inbox within a week. Keep an eye out.";
         setMessages(prev => {
           const u = [...prev, { role: "assistant" as const, content: finalMsg }];
           setLatestAiIndex(u.length - 1);
@@ -536,7 +536,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
                       lineHeight: 1.6,
                     }}
                   >
-                    Tell us about your role and we'll find you the right engineer in 72 hours.
+                    Tell us about your role and we'll find you the right engineer.
                   </motion.p>
                 </div>
               )}

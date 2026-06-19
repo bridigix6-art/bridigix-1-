@@ -235,7 +235,7 @@ export function CTABanner() {
                 </h2>
 
                 <p className="text-[15px] font-light text-[rgba(255,255,255,0.48)] mb-10 leading-[1.65] max-w-[380px]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  Tell us what you need in 5 minutes. Three vetted profiles in your inbox within 72 hours.
+                  Tell us what you need in 5 minutes. Three vetted profiles in your inbox.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 items-start">

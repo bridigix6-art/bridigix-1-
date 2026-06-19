@@ -8,7 +8,7 @@ const faqs = [
   { q: "Why only a small number of candidates?", a: "Because three strong fits are more useful than twenty maybes. We save you the cognitive overhead of sorting through a list and present only the people we'd genuinely recommend." },
   { q: "How do I know candidates aren't being reused across clients?", a: "We track active matching. A candidate shown to one client is locked from simultaneous presentation to another in the same space. We're also transparent about this in every intro note." },
   { q: "What happens if someone looks good but doesn't perform after hiring?", a: "That's what the 14-day guarantee is for. Within the first two weeks, if the fit isn't working, we replace the candidate at no additional charge." },
-  { q: "Are you optimizing for speed or quality?", a: "Quality, without sacrificing speed. 72 hours is the delivery window because we've built the network in advance — not because we're cutting corners." },
+  { q: "Are you optimizing for speed or quality?", a: "Quality, without sacrificing speed. We've built the network in advance." },
   { q: "Can I still run my own hiring process alongside Bridigix?", a: "Yes. Some founders use us in parallel with job boards or in-house recruiting. We're not exclusive unless you want us to be." },
   { q: "What kinds of roles do you struggle with?", a: "Truly niche specializations — deep research roles, hardware-adjacent software, or highly regulated domains where our network is thinner. We'll tell you honestly before you start." }
 ];

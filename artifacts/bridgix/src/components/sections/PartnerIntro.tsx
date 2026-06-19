@@ -14,7 +14,7 @@ const candidateCards = [
   },
   {
     photo: muhammadPhoto,
-    name: "Muhammad K.",
+    name: "Aleesha M.",
     role: "AI Automation Specialist",
     accentColor: "#8B5CF6",
   },

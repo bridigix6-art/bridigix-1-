@@ -313,15 +313,14 @@ const steps = [
     Mockup: NetworkSearchMockup,
   },
   {
-    title: "Every candidate is interviewed by us.",
+    title: "Every candidate is interviewed before they reach you.",
     body: "Before you see anyone, we speak with them ourselves. We look at what they've built, how they think under pressure, and what they're like to work with day-to-day.",
     badge: "60–90 min assessment",
     Mockup: InterviewMockup,
   },
   {
     title: "You receive a curated shortlist.",
-    body: "Within 72 hours, you get a small set of profiles we'd genuinely put in front of your team. Each comes with a personal note explaining exactly why we chose them for you.",
-    badge: "Delivered in 72 hours",
+    body: "You get a small set of profiles we'd genuinely put in front of your team. Each comes with a personal note explaining exactly why we chose them for you.",
     Mockup: ShortlistMockup,
   },
   {

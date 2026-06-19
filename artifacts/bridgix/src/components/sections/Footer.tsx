@@ -59,7 +59,7 @@ export function Footer() {
                   <span style={{ color: "rgba(255,255,255,0.45)" }}>your team actually needs?</span>
                 </h3>
                 <p className="text-[14px] font-light" style={{ color: "rgba(255,255,255,0.40)", fontFamily: "'Inter', sans-serif" }}>
-                  No job boards. No agencies. Just matched engineers in 72 hours.
+                  No job boards. No agencies. Just matched engineers.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
@@ -75,10 +75,7 @@ export function Footer() {
                   }}
                   onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 28px rgba(26,122,74,0.5)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 20px rgba(26,122,74,0.35)"; e.currentTarget.style.transform = "translateY(0)"; }}
-                >
-                  Get started
-                </button>
-                <a
+                </butto
                   href="mailto:hareem@bridigix.org"
                   className="text-[14px] font-normal cursor-pointer transition-all duration-200 flex items-center justify-center"
                   style={{
