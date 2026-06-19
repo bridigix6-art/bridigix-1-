@@ -115,9 +115,7 @@ export function Footer() {
               <p
                 className="text-[13px] font-light leading-[1.7] max-w-[300px]"
                 style={{ color: "rgba(255,255,255,0.35)", fontFamily: "'Inter', sans-serif" }}
-              >
-                Engineering hiring that works the first time. We match founders with pre-vetted engineers in 72 hours.
-              </p>
+              >Engineering hiring that works the first time. We match founders with pre-vetted engineers .</p>
 
               {/* Newsletter */}
               <div className="mt-2">
@@ -277,7 +275,6 @@ export function Footer() {
           </div>
         </div>
       </footer>
-
       <AnimatePresence>
         {modalOpen && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 md:p-6">
