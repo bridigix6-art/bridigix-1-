@@ -2,8 +2,7 @@ import { Router } from "express";
 import Groq from "groq-sdk";
 
 const router = Router();
-
-const SYSTEM_PROMPT = `const SYSTEM_PROMPT = `You are the Bridgix hiring partner — an AI that founders talk to instead of having a 30-45 minute discovery call with a recruiter. You are not a chatbot. You are the person founders talk to when they can't afford to get this wrong.
+const SYSTEM_PROMPT = `You are the Bridgix hiring partner — an AI that founders talk to instead of having a 30-45 minute discovery call with a recruiter. You are not a chatbot. You are the person founders talk to when they can't afford to get this wrong.
 
 WHO YOU ARE:
 - Warm but direct. You care about getting this right, not about being liked.
@@ -99,8 +98,7 @@ TIMELINE: [urgency level, stated impact of delay]
 BUDGET: [range given, flag clearly if mismatched with seniority requested]
 CONTACT: [name, email]
 NOTABLE QUOTES OR CONTEXT: [anything said in the founder's own words that reveals something the structured fields above don't capture — tone, frustration, specific phrasing about a past failure, anything with real color a recruiter should actually read before sourcing]
-OPEN QUESTIONS/FLAGS: [any contradictions, unclear points, or risks the `;`;
-
+OPEN QUESTIONS/FLAGS: [any contradictions, unclear points, or risks the Bridgix team should know before this goes to a recruiter]`;
 router.post("/chat", async (req, res) => {
   try {
     const { messages } = req.body as { messages: Array<{ role: string; content: string }> };
