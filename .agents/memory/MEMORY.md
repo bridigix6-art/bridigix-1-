@@ -1,2 +1,3 @@
 - [Bridgix stack + routing](bridgix-project.md) — React+Vite+Tailwind v4+Framer Motion; wouter router with BASE_URL base; /join page for talent network.
 - [Bridgix API](bridgix-api.md) — Express API server on port 8080; Groq SDK (llama-3.3-70b-versatile) via GROQ_API_KEY env var; chat route at /api/chat.
+- [Supabase schema reality](supabase-schema.md) — join_applications has flat columns (not form_data JSONB); chat_conversations has no unique constraint on email so upsert fails; use select+update/insert pattern for save-chat.

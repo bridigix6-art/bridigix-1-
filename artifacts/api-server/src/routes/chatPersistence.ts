@@ -21,18 +21,37 @@ router.post("/save-chat", async (req, res) => {
       || "";
     const userAgent = req.headers["user-agent"] ?? "";
 
-    const { error } = await supabase
+    // Try to update an existing row first; if none exists, insert a new one
+    const { data: existing } = await supabase
       .from("chat_conversations")
-      .upsert(
-        {
+      .select("id")
+      .eq("email", normalizedEmail)
+      .maybeSingle();
+
+    let error;
+    if (existing) {
+      const { error: updateErr } = await supabase
+        .from("chat_conversations")
+        .update({
+          messages,
+          ip_address: ipAddress,
+          user_agent: userAgent,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("email", normalizedEmail);
+      error = updateErr;
+    } else {
+      const { error: insertErr } = await supabase
+        .from("chat_conversations")
+        .insert({
           email: normalizedEmail,
           messages,
           ip_address: ipAddress,
           user_agent: userAgent,
           updated_at: new Date().toISOString(),
-        },
-        { onConflict: "email" }
-      );
+        });
+      error = insertErr;
+    }
 
     if (error) {
       req.log.error({ error }, "Supabase save-chat error");
@@ -82,8 +101,13 @@ router.post("/save-application", async (req, res) => {
       formData: Record<string, unknown>;
     };
 
-    if (!email) {
-      res.status(400).json({ error: "email is required" });
+    if (!name?.toString().trim() || !email?.toString().trim()) {
+      res.status(400).json({ error: "name and email are required" });
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.toString().trim())) {
+      res.status(400).json({ error: "Invalid email address" });
       return;
     }
 
@@ -91,12 +115,27 @@ router.post("/save-application", async (req, res) => {
       || req.socket.remoteAddress
       || "";
 
+    const fd = (formData ?? {}) as Record<string, unknown>;
+
     const { error } = await supabase
       .from("join_applications")
       .insert({
-        name,
-        email: email.toLowerCase().trim(),
-        form_data: formData,
+        name: name.toString().trim(),
+        email: email.toString().toLowerCase().trim(),
+        location: fd["location"] ?? null,
+        role: fd["role"] ?? null,
+        other_role: fd["otherRole"] ?? null,
+        experience: fd["experience"] ?? null,
+        skills: Array.isArray(fd["skills"]) ? fd["skills"] : [],
+        github: fd["github"] ?? null,
+        linkedin: fd["linkedin"] ?? null,
+        project: fd["project"] ?? null,
+        environment: fd["environment"] ?? null,
+        status: fd["status"] ?? null,
+        availability: fd["availability"] ?? null,
+        work_type: Array.isArray(fd["workType"]) ? fd["workType"] : [],
+        salary: fd["salary"] ?? null,
+        notes: fd["notes"] ?? null,
         ip_address: ipAddress,
       });
 
