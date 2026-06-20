@@ -44,7 +44,5 @@ externalPort = 80
 [userenv.shared]
 SUPABASE_URL = "https://vtgbivniyrrmtyyczvjn.supabase.co"
 SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2Jpdm5peXJybXR5eWN6dmpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NjE2OTQsImV4cCI6MjA5NzQzNzY5NH0.pyrT_F3Wf01DGmauxhP2hbSpS7LHpKxUq3LqQOFVbi8"
-ADMIN_PASSWORD = "bridigix2025admin"
-GROQ_API_KEY = "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"
 PORT = "5000"
 BASE_PATH = "/"
