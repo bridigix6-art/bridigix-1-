@@ -248,6 +248,36 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const [savedMessages, setSavedMessages] = useState<Message[] | null>(null);
   const [recoveryBarHidden, setRecoveryBarHidden] = useState(false);
   const [greeting] = useState(() => getTimeGreeting());
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  const toggleListening = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice input isn't supported in this browser. Try Chrome or Edge.");
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((r: any) => r[0].transcript)
+        .join("");
+      setInput(transcript);
+    };
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  }, [isListening]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -569,6 +599,22 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
               {/* Messages */}
               <div className="flex flex-col gap-5">
+                <button
+                    onClick={toggleListening}
+                    type="button"
+                    style={{
+                      width: 52, height: 52, borderRadius: 13, border: "none", flexShrink: 0,
+                      background: isListening ? "linear-gradient(135deg, #E05050, #FF7070)" : "rgba(26,122,74,0.08)",
+                      cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" stroke={isListening ? "white" : "#1A7A4A"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8" stroke={isListening ? "white" : "#1A7A4A"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
                 {messages.map((msg, i) =>
                   msg.role === "assistant"
                     ? <AIBubble key={i} content={msg.content} isLatest={i === latestAiIndex} />

@@ -267,7 +267,6 @@ export function CTABanner() {
                   <div className="flex items-center gap-2 self-center">
                     <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#34D399", boxShadow: "0 0 6px rgba(52,211,153,0.6)" }} />
                     <span className="text-[12px] text-[rgba(255,255,255,0.32)]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                      No fees until you hire
                     </span>
                   </div>
                 </div>

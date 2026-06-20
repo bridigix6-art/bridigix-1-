@@ -75,7 +75,6 @@ export function Footer() {
                   }}
                   onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 28px rgba(26,122,74,0.5)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 20px rgba(26,122,74,0.35)"; e.currentTarget.style.transform = "translateY(0)"; }}
-                </butto
                   href="mailto:hareem@bridigix.org"
                   className="text-[14px] font-normal cursor-pointer transition-all duration-200 flex items-center justify-center"
                   style={{
@@ -91,7 +90,7 @@ export function Footer() {
                   onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(255,255,255,0.70)"; }}
                 >
                   Talk to us
-                </a>
+                </button>
               </div>
             </div>
           </div>
