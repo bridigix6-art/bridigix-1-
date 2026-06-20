@@ -325,12 +325,50 @@ export default function JoinPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleSubmit = () => {
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
     const e = validateStep3();
     if (Object.keys(e).length) { setErrors(e); return; }
     setErrors({});
-    setSubmitted(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch("/api/save-application", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          formData: {
+            location: form.location,
+            role: form.role === "Other" ? form.otherRole : form.role,
+            experience: form.experience,
+            skills: form.skills,
+            github: form.github,
+            linkedin: form.linkedin,
+            project: form.project,
+            environment: form.environment,
+            status: form.status,
+            availability: form.availability,
+            workType: form.workType,
+            salary: form.salary,
+            notes: form.notes,
+          },
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error || `Server error ${res.status}`);
+      }
+      setSubmitted(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const stepLabels = ["About You", "Your Work", "Availability"];
@@ -691,13 +729,20 @@ export default function JoinPage() {
                       style={{ background: "none", border: "none", fontFamily: "Inter, sans-serif", fontSize: 14, color: "#6B6B6B", cursor: "pointer" }}>
                       ← Back
                     </button>
-                    <button type="button" onClick={handleSubmit}
-                      className="cursor-pointer transition-all duration-200"
-                      style={{ background: "#1A7A4A", color: "#FFFFFF", borderRadius: 14, padding: "13px 32px", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: 15, border: "none", boxShadow: "0 4px 20px rgba(26,122,74,0.30)" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#155E39"; e.currentTarget.style.boxShadow = "0 6px 28px rgba(26,122,74,0.42)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "#1A7A4A"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(26,122,74,0.30)"; }}>
-                      Submit Application
-                    </button>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+                      {submitError && (
+                        <p style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "#E05050", textAlign: "right" }}>
+                          {submitError}
+                        </p>
+                      )}
+                      <button type="button" onClick={handleSubmit} disabled={submitting}
+                        className="cursor-pointer transition-all duration-200"
+                        style={{ background: submitting ? "#6B6B6B" : "#1A7A4A", color: "#FFFFFF", borderRadius: 14, padding: "13px 32px", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: 15, border: "none", boxShadow: "0 4px 20px rgba(26,122,74,0.30)", cursor: submitting ? "not-allowed" : "pointer" }}
+                        onMouseEnter={e => { if (!submitting) { e.currentTarget.style.background = "#155E39"; e.currentTarget.style.boxShadow = "0 6px 28px rgba(26,122,74,0.42)"; } }}
+                        onMouseLeave={e => { if (!submitting) { e.currentTarget.style.background = "#1A7A4A"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(26,122,74,0.30)"; } }}>
+                        {submitting ? "Submitting..." : "Submit Application"}
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               )}

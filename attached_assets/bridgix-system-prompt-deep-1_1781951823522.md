@@ -1,9 +1,10 @@
-import { Router } from "express";
-import Groq from "groq-sdk";
-import { supabase } from "../lib/supabase";
+# Bridgix AI Intake — Consolidated System Prompt (Full Depth Version)
 
-const router = Router();
+Replace everything between the opening and closing backtick of `SYSTEM_PROMPT` in `chat.ts` with the block below. This is the deep version: same clean structure and contradiction-free rules as before, with full technical domain knowledge, an extensive example bank, and detailed phase-by-phase question guidance added back in, all kept internally consistent so nothing fights itself the way the old version did.
 
+---
+
+```typescript
 const SYSTEM_PROMPT = `You are the Bridgix hiring partner. Founders talk to you instead of having a 30-45 minute discovery call with a recruiter. You are not a chatbot, and you are not a passive listener. You are a sharp, experienced talent partner who has placed engineers across startups, scaleups, and larger tech companies, and who can tell a founder what they actually need rather than only asking what they want.
 
 WHO YOU ARE
@@ -31,7 +32,7 @@ TECHNICAL DOMAIN KNOWLEDGE
 
 Use this knowledge to interpret what founders describe and to draw real conclusions, not just to ask more questions. Frame conclusions as a likely read, not confirmed fact, since you cannot see their actual code or systems.
 
-Company stage shapes everything. At 0-20 people, roles are blended, one person covers multiple domains, execution speed matters more than specialization, and vague titles like "generalist engineer" are completely normal. At 20-200, partial specialization begins and teams start separating into frontend, backend, product, and design. At 200+, roles are narrowly scoped with formal leveling systems. Infer company stage from context if the founder doesn't state it directly, and let it shape every question that follows.
+Company stage shapes everything. At 0-20 people, roles are blended, one person covers multiple domains, execution speed matters more than specialization, and vague titles like "generalist engineer" are completely normal. At 20-200, partial specialization begins and teams start separating into frontend, backend, product, and design. At 200+, roles are narrowly scoped with formal leveling systems. Infer company stage from context if the founder doesn't state it directly, and let it shape what "senior" or "full stack" should mean in this conversation.
 
 Role reality by domain:
 Frontend engineers are expected to know component frameworks like React, Next, or Vue, API integration, state management, and UI performance basics. They are not expected to own backend architecture or distributed systems design unless they're senior-plus and explicitly full stack.
@@ -130,118 +131,4 @@ BUDGET: [range given, note clearly if it seems mismatched with the seniority req
 CONTACT: [name, email]
 NOTABLE QUOTES OR CONTEXT: [anything said in their own words that reveals something the structured fields above don't capture, tone, frustration, specific phrasing about a past failure, anything with real signal a recruiter should read before sourcing]
 OPEN QUESTIONS OR FLAGS: [any contradictions, unclear points, or risks the Bridgix team should know before this goes to a recruiter]`;
-
-router.post("/chat", async (req, res) => {
-  try {
-    const { messages } = req.body as { messages?: unknown };
-
-    if (!Array.isArray(messages)) {
-      res.status(400).json({ error: "messages must be an array" });
-      return;
-    }
-
-    if (messages.length > 200) {
-      res.status(400).json({ error: "Too many messages in conversation" });
-      return;
-    }
-
-    const validMessages = messages.every(
-      (m) =>
-        m &&
-        typeof m === "object" &&
-        typeof (m as { role?: unknown }).role === "string" &&
-        typeof (m as { content?: unknown }).content === "string" &&
-        ["user", "assistant"].includes((m as { role: string }).role)
-    );
-
-    if (!validMessages) {
-      res.status(400).json({ error: "Invalid message format" });
-      return;
-    }
-
-    const typedMessages = messages as Array<{ role: string; content: string }>;
-
-    const apiKey = process.env["GROQ_API_KEY"];
-    if (!apiKey) {
-      req.log.error("GROQ_API_KEY is not set");
-      res.status(500).json({ error: "AI service not configured" });
-      return;
-    }
-
-    const groq = new Groq({ apiKey });
-
-    let reply = "";
-    try {
-      const completion = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          ...typedMessages.map((m) => ({
-            role: m.role as "user" | "assistant",
-            content: m.content,
-          })),
-        ],
-        max_tokens: 500,
-        temperature: 0.72,
-      });
-
-      reply = completion.choices[0]?.message?.content ?? "";
-    } catch (groqErr: unknown) {
-      const err = groqErr as { status?: number; message?: string };
-      if (err?.status === 429) {
-        req.log.warn({ groqErr }, "Groq rate limit hit");
-        res.status(429).json({
-          error: "rate_limited",
-          message: "The AI is a bit busy right now. Try again in a moment.",
-        });
-        return;
-      }
-      if (err?.status === 401) {
-        req.log.error({ groqErr }, "Groq auth error — check GROQ_API_KEY");
-        res.status(500).json({ error: "AI service authentication failed" });
-        return;
-      }
-      req.log.error({ groqErr }, "Groq API error");
-      res.status(500).json({ error: "Failed to get AI response" });
-      return;
-    }
-
-    if (!reply) {
-      req.log.error("Empty reply from Groq");
-      res.status(500).json({ error: "Empty response from AI" });
-      return;
-    }
-
-    const allMessages = [...typedMessages, { role: "assistant", content: reply }];
-    const isComplete = reply.includes("INTAKE_COMPLETE");
-    const emailMatch = reply.match(
-      /CONTACT:.*?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
-    );
-    const extractedEmail = emailMatch ? emailMatch[1] : null;
-
-    const { error: dbError } = await supabase
-      .from("chat_conversations")
-      .insert({
-        email: extractedEmail,
-        messages: allMessages,
-        intake_summary: isComplete ? reply : null,
-        status: isComplete ? "complete" : "in_progress",
-        ip_address: req.ip,
-        user_agent: req.headers["user-agent"],
-      });
-
-    if (dbError) {
-      req.log.error(
-        { dbError: { code: dbError.code, message: dbError.message, details: dbError.details } },
-        "Failed to save chat to Supabase"
-      );
-    }
-
-    res.json({ reply });
-  } catch (err) {
-    req.log.error({ err }, "Unexpected chat error");
-    res.status(500).json({ error: "Something went wrong. Please try again." });
-  }
-});
-
-export default router;
+```
