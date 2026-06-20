@@ -21,7 +21,6 @@ router.post("/save-chat", async (req, res) => {
       || "";
     const userAgent = req.headers["user-agent"] ?? "";
 
-    // Try to update an existing row first; if none exists, insert a new one
     const { data: existing } = await supabase
       .from("chat_conversations")
       .select("id")
@@ -61,34 +60,34 @@ router.post("/save-chat", async (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
-    req.log.error({ err }, "Save chat error");
+    req.log.error({ err }, "Unexpected save-chat error");
     res.status(500).json({ error: "Failed to save chat" });
   }
 });
 
 router.get("/load-chat", async (req, res) => {
   try {
-    const email = (req.query["email"] as string | undefined)?.toLowerCase().trim();
-
+    const { email } = req.query as { email?: string };
     if (!email) {
-      res.status(400).json({ error: "email query param required" });
+      res.status(400).json({ error: "email is required" });
       return;
     }
 
     const { data, error } = await supabase
       .from("chat_conversations")
       .select("messages")
-      .eq("email", email)
-      .single();
+      .eq("email", email.toLowerCase().trim())
+      .maybeSingle();
 
-    if (error || !data) {
-      res.json({ messages: null });
+    if (error) {
+      req.log.error({ error }, "Supabase load-chat error");
+      res.status(500).json({ error: "Failed to load chat" });
       return;
     }
 
-    res.json({ messages: data.messages });
+    res.json(data ?? { messages: [] });
   } catch (err) {
-    req.log.error({ err }, "Load chat error");
+    req.log.error({ err }, "Unexpected load-chat error");
     res.status(500).json({ error: "Failed to load chat" });
   }
 });
@@ -147,8 +146,53 @@ router.post("/save-application", async (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
-    req.log.error({ err }, "Save application error");
+    req.log.error({ err }, "Unexpected save-application error");
     res.status(500).json({ error: "Failed to save application" });
+  }
+});
+
+router.post("/subscribe", async (req, res) => {
+  try {
+    const { email } = req.body as { email: string };
+
+    if (!email?.toString().trim()) {
+      res.status(400).json({ error: "email is required" });
+      return;
+    }
+
+    const normalizedEmail = email.toString().toLowerCase().trim();
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      res.status(400).json({ error: "Invalid email address" });
+      return;
+    }
+
+    const ipAddress = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
+      || req.socket.remoteAddress
+      || "";
+
+    const { error } = await supabase
+      .from("join_applications")
+      .insert({
+        name: "Newsletter Subscriber",
+        email: normalizedEmail,
+        status: "newsletter",
+        notes: "newsletter_subscriber",
+        ip_address: ipAddress,
+        skills: [],
+        work_type: [],
+      });
+
+    if (error) {
+      req.log.error({ error }, "Supabase subscribe error");
+      res.status(500).json({ error: "Failed to save subscription" });
+      return;
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Unexpected subscribe error");
+    res.status(500).json({ error: "Failed to save subscription" });
   }
 });
 

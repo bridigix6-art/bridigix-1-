@@ -6,11 +6,27 @@ export function Footer() {
   const [modalOpen, setModalOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
+    if (!email.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        setSubmitted(true);
+      }
+    } catch {
       setSubmitted(true);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -31,12 +47,10 @@ export function Footer() {
   return (
     <>
       <footer className="relative overflow-hidden" style={{ background: "#08080A" }}>
-        {/* Top gradient accent */}
         <div className="h-px w-full" style={{
           background: "linear-gradient(90deg, transparent, rgba(52,211,153,0.4), rgba(26,122,74,0.35), rgba(245,200,66,0.2), transparent)",
         }} />
 
-        {/* Background texture */}
         <div className="absolute inset-0 pointer-events-none" style={{
           backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.012) 1px, transparent 0)",
           backgroundSize: "32px 32px",
@@ -47,63 +61,34 @@ export function Footer() {
 
         <div className="relative max-w-[1160px] mx-auto px-6">
 
-          {/* CTA Banner */}
-          <div className="py-16 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-            <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-              <div className="flex-1">
-                <h3
-                  className="text-[clamp(24px,2.8vw,38px)] tracking-[-0.04em] leading-[1.1] mb-3"
-                  style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300, color: "#FFFFFF" }}
-                >
-                  Ready to hire the engineer<br />
-                  <span style={{ color: "rgba(255,255,255,0.45)" }}>your team actually needs?</span>
-                </h3>
-                <p className="text-[14px] font-light" style={{ color: "rgba(255,255,255,0.40)", fontFamily: "'Inter', sans-serif" }}>
-                  No job boards. No agencies. Just matched engineers.
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
-                <button
-                  className="text-white text-[14px] font-normal cursor-pointer transition-all duration-200"
-                  style={{
-                    borderRadius: "100px",
-                    background: "linear-gradient(135deg, #1A7A4A, #2A9D5C)",
-                    padding: "13px 28px",
-                    border: "none",
-                    boxShadow: "0 4px 20px rgba(26,122,74,0.35)",
-                    fontFamily: "'Inter', sans-serif",
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 28px rgba(26,122,74,0.5)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 20px rgba(26,122,74,0.35)"; e.currentTarget.style.transform = "translateY(0)"; }}
-                  href="mailto:hareem@bridigix.org"
-                  className="text-[14px] font-normal cursor-pointer transition-all duration-200 flex items-center justify-center"
-                  style={{
-                    borderRadius: "100px",
-                    background: "rgba(255,255,255,0.06)",
-                    padding: "13px 28px",
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    color: "rgba(255,255,255,0.70)",
-                    fontFamily: "'Inter', sans-serif",
-                    textDecoration: "none",
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.10)"; e.currentTarget.style.color = "#fff"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(255,255,255,0.70)"; }}
-                >
-                  Talk to us
-                </button>
-              </div>
-            </div>
-          </div>
-
           {/* Main footer grid */}
           <div className="py-14 grid grid-cols-1 md:grid-cols-4 gap-10 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
             {/* Brand column */}
             <div className="md:col-span-2 flex flex-col gap-5">
-              <div className="flex items-center gap-2.5">
-                <img src={logoImage} alt="Bridigix" style={{ width: 26, height: 26, objectFit: "contain" }} />
+              <div className="flex items-center gap-3">
+                <div style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  flexShrink: 0,
+                  background: "transparent",
+                }}>
+                  <img
+                    src={logoImage}
+                    alt="Bridigix"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                      mixBlendMode: "screen",
+                      filter: "brightness(1.15) contrast(1.05)",
+                    }}
+                  />
+                </div>
                 <span
-                  className="font-medium text-[17px] tracking-[-0.02em]"
-                  style={{ fontFamily: "'Inter', sans-serif", color: "rgba(255,255,255,0.88)" }}
+                  className="font-medium text-[19px] tracking-[-0.03em]"
+                  style={{ fontFamily: "'Inter', sans-serif", color: "rgba(255,255,255,0.92)" }}
                 >
                   Bridigix
                 </span>
@@ -111,7 +96,7 @@ export function Footer() {
               <p
                 className="text-[13px] font-light leading-[1.7] max-w-[300px]"
                 style={{ color: "rgba(255,255,255,0.35)", fontFamily: "'Inter', sans-serif" }}
-              >Engineering hiring that works the first time. We match founders with pre-vetted engineers .</p>
+              >Engineering hiring that works the first time. We match founders with pre-vetted engineers.</p>
 
               {/* Newsletter */}
               <div className="mt-2">
@@ -130,6 +115,7 @@ export function Footer() {
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       placeholder="Enter your email"
+                      required
                       className="flex-1 text-[13px]"
                       style={{
                         background: "rgba(255,255,255,0.05)",
@@ -146,17 +132,19 @@ export function Footer() {
                     />
                     <button
                       type="submit"
+                      disabled={submitting}
                       className="text-[13px] font-medium cursor-pointer flex-shrink-0"
                       style={{
-                        background: "linear-gradient(135deg, #1A7A4A, #2A9D5C)",
+                        background: submitting ? "rgba(26,122,74,0.5)" : "linear-gradient(135deg, #1A7A4A, #2A9D5C)",
                         borderRadius: "8px",
                         padding: "9px 16px",
                         border: "none",
                         color: "white",
                         fontFamily: "'Inter', sans-serif",
+                        cursor: submitting ? "wait" : "pointer",
                       }}
                     >
-                      Subscribe
+                      {submitting ? "..." : "Subscribe"}
                     </button>
                   </form>
                 )}
@@ -227,6 +215,7 @@ export function Footer() {
                 link.onClick ? (
                   <button
                     key={link.label}
+                    type="button"
                     onClick={link.onClick}
                     className="text-[13px] font-light transition-colors duration-200 hover:text-white text-left cursor-pointer"
                     style={{ color: "rgba(255,255,255,0.45)", fontFamily: "'Inter', sans-serif", background: "none", border: "none", padding: 0 }}
@@ -271,6 +260,7 @@ export function Footer() {
           </div>
         </div>
       </footer>
+
       <AnimatePresence>
         {modalOpen && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 md:p-6">
@@ -295,6 +285,7 @@ export function Footer() {
               <div className="flex justify-between items-start mb-8 mt-2">
                 <h2 className="text-[22px] text-[#0A0A0A]" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 400 }}>Privacy Policy</h2>
                 <button
+                  type="button"
                   onClick={() => setModalOpen(false)}
                   className="p-2 -mr-2 -mt-2 text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors rounded-full hover:bg-gray-100 cursor-pointer"
                 >

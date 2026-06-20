@@ -2,7 +2,6 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navigation } from "@/components/sections/Navigation";
 import { useLocation } from "wouter";
-import bridgixLogo from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
 
 const ROLES = [
   "Select your primary role",
@@ -29,54 +28,142 @@ const WORK_TYPES = ["Part-time", "Full-time", "Contract / Freelance"];
 const ENVIRONMENTS = ["Early-stage startup", "Growth-stage startup", "Scale-up", "Remote-first", "Any"];
 const STATUS_OPTIONS = ["Open to opportunities", "Actively looking", "Employed but open", "Not currently looking"];
 
-const SKILLS_SUGGESTIONS = [
-  // Languages
-  "JavaScript", "TypeScript", "Python", "Go", "Rust", "Java", "Kotlin", "Swift",
-  "C#", "C++", "PHP", "Ruby", "Scala", "Elixir", "Haskell", "Dart", "Zig", "Clojure",
-  // Frontend
-  "React", "Next.js", "Vue.js", "Angular", "Svelte", "SolidJS", "Astro",
-  "Tailwind CSS", "CSS/SCSS", "HTML", "Three.js", "Framer Motion", "GSAP",
-  "Redux", "Zustand", "Jotai", "React Query", "Vite", "Webpack", "Remix",
-  // Backend
-  "Node.js", "Express.js", "Fastify", "Hono", "NestJS",
-  "Django", "FastAPI", "Flask", "SQLAlchemy",
-  "Spring Boot", "Laravel", "Ruby on Rails",
-  "Gin", "Echo", "Fiber", "Chi", "Actix", "Axum",
-  "tRPC", "GraphQL", "REST APIs", "gRPC", "WebSockets",
-  // Mobile
-  "React Native", "Flutter", "SwiftUI", "Jetpack Compose", "Expo", "Capacitor",
-  // AI / ML
-  "TensorFlow", "PyTorch", "scikit-learn", "Keras", "XGBoost",
-  "LangChain", "LlamaIndex", "OpenAI API", "Anthropic API",
-  "Hugging Face", "RAG", "Fine-tuning", "Vector Databases",
-  "Pandas", "NumPy", "Matplotlib", "Seaborn", "Spark",
-  "OpenCV", "NLTK", "spaCy", "Stable Diffusion",
-  // Cloud & Infrastructure
-  "AWS", "GCP", "Google Cloud", "Azure", "Cloudflare",
-  "Docker", "Kubernetes", "Helm", "Terraform", "Pulumi", "Ansible",
-  "Linux", "Bash", "Shell Scripting", "Nginx", "Caddy",
-  "Serverless", "Edge Computing", "CDN", "Load Balancing",
-  // CI/CD & DevOps
-  "GitHub Actions", "GitLab CI", "Jenkins", "CircleCI", "ArgoCD", "Tekton",
-  // Observability
-  "Prometheus", "Grafana", "Datadog", "Sentry", "OpenTelemetry", "Jaeger", "Loki",
-  // Databases
-  "PostgreSQL", "MySQL", "SQLite", "MongoDB", "Redis", "Elasticsearch",
-  "DynamoDB", "Supabase", "Firebase", "Cassandra", "Neo4j",
-  "ClickHouse", "CockroachDB", "PlanetScale", "Neon", "TimescaleDB",
-  // Messaging & Streaming
-  "Kafka", "RabbitMQ", "Celery", "SQS", "Pub/Sub", "NATS",
-  // Architecture
-  "Microservices", "System Design", "Event-Driven Architecture",
-  "Domain-Driven Design", "Clean Architecture", "CQRS", "Event Sourcing",
-  // Web3 / Blockchain
-  "Solidity", "Ethereum", "Web3.js", "Ethers.js", "Hardhat", "Foundry", "Smart Contracts",
-  // Testing & Quality
-  "Testing / TDD", "Jest", "Vitest", "Cypress", "Playwright", "Pytest",
-  // Soft skills
-  "Technical Leadership", "Code Review", "Performance Optimization",
-  "Security Engineering", "Architecture Review", "Mentoring",
+const SKILLS_CATEGORIES: { category: string; skills: string[] }[] = [
+  {
+    category: "Programming Languages",
+    skills: ["Python", "JavaScript", "TypeScript", "Java", "C", "C++", "C#", "Go", "Rust", "Kotlin", "Swift", "Dart", "PHP", "Ruby", "Scala", "R", "MATLAB", "Bash/Shell", "SQL", "Perl", "Lua", "Haskell", "Elixir", "Objective-C", "VB.NET"],
+  },
+  {
+    category: "Frontend — Core",
+    skills: ["HTML5", "CSS3"],
+  },
+  {
+    category: "Frontend — Frameworks",
+    skills: ["React", "Next.js", "Vue.js", "Nuxt.js", "Angular", "Svelte", "Remix", "SolidJS", "Astro"],
+  },
+  {
+    category: "Frontend — Styling",
+    skills: ["Tailwind CSS", "Bootstrap", "Material UI", "Chakra UI", "Sass", "Styled Components", "CSS/SCSS"],
+  },
+  {
+    category: "Frontend — State & Build",
+    skills: ["Redux", "Zustand", "MobX", "Recoil", "Context API", "Jotai", "React Query", "Vite", "Webpack"],
+  },
+  {
+    category: "Backend — Node",
+    skills: ["Node.js", "Express.js", "NestJS", "Fastify", "Hono", "tRPC"],
+  },
+  {
+    category: "Backend — Python",
+    skills: ["Django", "Flask", "FastAPI", "SQLAlchemy"],
+  },
+  {
+    category: "Backend — Java / .NET",
+    skills: ["Spring Boot", "Hibernate", "ASP.NET", ".NET Core"],
+  },
+  {
+    category: "Backend — PHP / Ruby",
+    skills: ["Laravel", "Symfony", "Ruby on Rails"],
+  },
+  {
+    category: "Backend — Go",
+    skills: ["Gin", "Fiber", "Echo", "Chi"],
+  },
+  {
+    category: "Backend — Rust",
+    skills: ["Actix", "Axum"],
+  },
+  {
+    category: "Databases — SQL",
+    skills: ["PostgreSQL", "MySQL", "MariaDB", "SQL Server", "Oracle", "SQLite"],
+  },
+  {
+    category: "Databases — NoSQL",
+    skills: ["MongoDB", "Redis", "Cassandra", "DynamoDB", "Couchbase", "Neo4j", "Firebase", "Elasticsearch"],
+  },
+  {
+    category: "Databases — Specialist",
+    skills: ["ClickHouse", "CockroachDB", "PlanetScale", "Neon", "TimescaleDB", "Supabase"],
+  },
+  {
+    category: "Database Skills",
+    skills: ["Query Optimization", "Indexing", "Normalization", "Transactions", "Replication", "Sharding"],
+  },
+  {
+    category: "Cloud — AWS",
+    skills: ["EC2", "S3", "Lambda", "RDS", "ECS", "EKS", "CloudFormation"],
+  },
+  {
+    category: "Cloud — Azure",
+    skills: ["Azure Functions", "Azure DevOps"],
+  },
+  {
+    category: "Cloud — GCP",
+    skills: ["Compute Engine", "BigQuery", "Cloud Run", "Google Cloud"],
+  },
+  {
+    category: "Cloud — General",
+    skills: ["Cloud Architecture", "Serverless", "Cost Optimization", "Edge Computing", "CDN"],
+  },
+  {
+    category: "DevOps",
+    skills: ["Docker", "Kubernetes", "Helm", "Jenkins", "GitHub Actions", "GitLab CI/CD", "CircleCI", "ArgoCD", "Terraform", "Ansible", "Prometheus", "Grafana", "ELK Stack", "Nginx", "Apache", "Datadog", "Sentry", "OpenTelemetry"],
+  },
+  {
+    category: "APIs & Integration",
+    skills: ["REST APIs", "GraphQL", "gRPC", "WebSockets", "OAuth", "JWT", "API Design", "API Security", "Rate Limiting"],
+  },
+  {
+    category: "Software Engineering",
+    skills: ["Data Structures", "Algorithms", "OOP", "Functional Programming", "SOLID Principles", "Design Patterns", "Clean Code", "System Design", "Distributed Systems", "Scalability", "Concurrency", "Multithreading"],
+  },
+  {
+    category: "Testing",
+    skills: ["Unit Testing", "Integration Testing", "End-to-End Testing", "TDD", "BDD", "Jest", "Vitest", "Cypress", "Playwright", "Selenium", "PyTest", "JUnit"],
+  },
+  {
+    category: "Mobile — Android",
+    skills: ["Kotlin", "Jetpack Compose"],
+  },
+  {
+    category: "Mobile — iOS",
+    skills: ["Swift", "SwiftUI"],
+  },
+  {
+    category: "Mobile — Cross Platform",
+    skills: ["Flutter", "React Native", "Ionic", "Expo", "Capacitor"],
+  },
+  {
+    category: "AI / ML Engineering",
+    skills: ["Machine Learning", "Deep Learning", "NLP", "Computer Vision", "TensorFlow", "PyTorch", "Scikit-Learn", "LLMs", "RAG", "Prompt Engineering", "Fine Tuning", "Vector Databases", "LangChain", "LlamaIndex", "AI Agents", "Hugging Face", "OpenAI API", "Anthropic API"],
+  },
+  {
+    category: "Data Engineering",
+    skills: ["ETL", "Data Pipelines", "Apache Spark", "Hadoop", "Kafka", "Airflow", "Data Warehousing", "RabbitMQ", "Celery"],
+  },
+  {
+    category: "Cybersecurity",
+    skills: ["OWASP Top 10", "Authentication", "Authorization", "Encryption", "Secure Coding", "Vulnerability Assessment", "Penetration Testing Basics", "Network Security"],
+  },
+  {
+    category: "Version Control",
+    skills: ["Git", "GitHub", "GitLab", "Bitbucket", "Branching Strategies", "Code Reviews", "Pull Requests"],
+  },
+  {
+    category: "System Design",
+    skills: ["Load Balancing", "Caching", "Message Queues", "Event Driven Architecture", "Microservices", "Monoliths", "Database Scaling", "CAP Theorem", "Consistency Models", "Domain-Driven Design", "Clean Architecture", "CQRS", "Event Sourcing"],
+  },
+  {
+    category: "Blockchain / Web3",
+    skills: ["Solidity", "Ethereum", "Web3.js", "Ethers.js", "Hardhat", "Foundry", "Smart Contracts"],
+  },
+  {
+    category: "Leadership & Process",
+    skills: ["Technical Leadership", "Code Review", "Performance Optimization", "Security Engineering", "Architecture Review", "Mentoring"],
+  },
 ];
+
+const ALL_SKILLS = SKILLS_CATEGORIES.flatMap(c => c.skills);
 
 function Field({ label, error, hint, optional, children }: {
   label: string; error?: string; hint?: string; optional?: boolean; children: React.ReactNode;
@@ -153,11 +240,21 @@ function PillToggle({ options, value, onChange, multi = false }: {
 
 function SkillsInput({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const [inputVal, setInputVal] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
-  const filtered = SKILLS_SUGGESTIONS.filter(s =>
-    s.toLowerCase().includes(inputVal.toLowerCase()) && !value.includes(s)
-  ).slice(0, 10);
+  const query = inputVal.toLowerCase().trim();
+
+  const filteredCategories = query
+    ? SKILLS_CATEGORIES
+        .map(cat => ({
+          ...cat,
+          skills: cat.skills.filter(s => s.toLowerCase().includes(query) && !value.includes(s)),
+        }))
+        .filter(cat => cat.skills.length > 0)
+    : SKILLS_CATEGORIES.map(cat => ({
+        ...cat,
+        skills: cat.skills.filter(s => !value.includes(s)),
+      })).filter(cat => cat.skills.length > 0);
 
   const add = (skill: string) => {
     const trimmed = skill.trim();
@@ -165,7 +262,14 @@ function SkillsInput({ value, onChange }: { value: string[]; onChange: (v: strin
       onChange([...value, trimmed]);
     }
     setInputVal("");
-    setShowSuggestions(false);
+  };
+
+  const addCustom = () => {
+    if (inputVal.trim() && !value.includes(inputVal.trim()) && !ALL_SKILLS.includes(inputVal.trim())) {
+      add(inputVal);
+    } else if (inputVal.trim()) {
+      add(inputVal.trim());
+    }
   };
 
   const remove = (skill: string) => onChange(value.filter(s => s !== skill));
@@ -184,31 +288,61 @@ function SkillsInput({ value, onChange }: { value: string[]; onChange: (v: strin
       <div className="relative">
         <input
           value={inputVal}
-          onChange={e => { setInputVal(e.target.value); setShowSuggestions(true); }}
-          onKeyDown={e => { if (e.key === "Enter" && inputVal.trim()) { e.preventDefault(); add(inputVal); } if (e.key === "Escape") setShowSuggestions(false); }}
-          onFocus={() => setShowSuggestions(true)}
-          onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-          placeholder="Type a skill and press Enter (e.g. React, Python, AWS...)"
+          onChange={e => { setInputVal(e.target.value); setShowDropdown(true); }}
+          onKeyDown={e => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (inputVal.trim()) addCustom();
+            }
+            if (e.key === "Escape") setShowDropdown(false);
+          }}
+          onFocus={() => setShowDropdown(true)}
+          onBlur={() => setTimeout(() => setShowDropdown(false), 160)}
+          placeholder="Search or add a skill (e.g. React, Python, AWS...)"
           style={{ ...inputStyle(), marginBottom: 0 }}
         />
         <AnimatePresence>
-          {showSuggestions && filtered.length > 0 && (
+          {showDropdown && filteredCategories.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.15 }}
-              className="absolute left-0 right-0 top-full mt-1 bg-white rounded-[12px] overflow-hidden z-10"
-              style={{ border: "1px solid #E8E8E8", boxShadow: "0 8px 28px rgba(0,0,0,0.10)", maxHeight: 280, overflowY: "auto" }}
+              className="absolute left-0 right-0 top-full mt-1 bg-white rounded-[14px] z-20"
+              style={{ border: "1px solid #E8E8E8", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", maxHeight: 340, overflowY: "auto" }}
             >
-              {filtered.map(s => (
-                <button key={s} type="button" onMouseDown={() => add(s)}
-                  className="w-full text-left px-4 py-2.5 text-[13px] cursor-pointer transition-colors"
-                  style={{ fontFamily: "'Inter', sans-serif", color: "#0A0A0A", background: "none", border: "none" }}
-                  onMouseEnter={e => e.currentTarget.style.background = "#F4FBF7"}
-                  onMouseLeave={e => e.currentTarget.style.background = "none"}
-                >
-                  {s}
-                </button>
+              {filteredCategories.map((cat, ci) => (
+                <div key={ci}>
+                  <div className="px-4 pt-3 pb-1"
+                    style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, fontWeight: 600, color: "#9B9B9B", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    {cat.category}
+                  </div>
+                  {cat.skills.map(s => (
+                    <button key={s} type="button" onMouseDown={() => add(s)}
+                      className="w-full text-left px-4 py-2 text-[13px] cursor-pointer transition-colors"
+                      style={{ fontFamily: "'Inter', sans-serif", color: "#0A0A0A", background: "none", border: "none" }}
+                      onMouseEnter={e => e.currentTarget.style.background = "#F4FBF7"}
+                      onMouseLeave={e => e.currentTarget.style.background = "none"}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
               ))}
+              {inputVal.trim() && !ALL_SKILLS.some(s => s.toLowerCase() === inputVal.toLowerCase()) && (
+                <div>
+                  <div className="px-4 pt-3 pb-1"
+                    style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, fontWeight: 600, color: "#9B9B9B", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    Custom
+                  </div>
+                  <button type="button" onMouseDown={addCustom}
+                    className="w-full text-left px-4 py-2 text-[13px] cursor-pointer transition-colors"
+                    style={{ fontFamily: "'Inter', sans-serif", color: "#1A7A4A", background: "none", border: "none", fontWeight: 500 }}
+                    onMouseEnter={e => e.currentTarget.style.background = "#F4FBF7"}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  >
+                    + Add "{inputVal.trim()}"
+                  </button>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -277,7 +411,7 @@ function CustomSelect({ options, value, onChange, placeholder, error }: {
 }
 
 export default function JoinPage() {
-  const [, navigate] = useLocation();
+  const [, setLocation] = useLocation();
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -377,124 +511,129 @@ export default function JoinPage() {
     return (
       <div className="min-h-screen" style={{ background: "#FAFAF8" }}>
         <Navigation />
-        <main className="pt-[100px] px-4 pb-0">
+        <main className="pt-[80px]">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="w-full"
             style={{
               background: "linear-gradient(160deg, #0D1412 0%, #0A0F0D 100%)",
-              minHeight: "calc(100dvh - 100px)",
+              minHeight: "calc(100dvh - 80px)",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              borderRadius: "28px 28px 0 0",
               padding: "80px 24px",
               position: "relative",
               overflow: "hidden",
             }}
           >
-            {/* Top accent line */}
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "linear-gradient(90deg, transparent, #34D399, #1A7A4A, transparent)" }} />
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg, transparent, #34D399, #1A7A4A, transparent)" }} />
 
-            {/* Dot texture */}
             <div className="absolute inset-0 pointer-events-none" style={{
               backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.015) 1px, transparent 0)",
               backgroundSize: "28px 28px",
             }} />
 
-            {/* Glow */}
             <div className="absolute pointer-events-none" style={{
               top: "50%", left: "50%", transform: "translate(-50%, -60%)",
-              width: 600, height: 600,
-              background: "radial-gradient(circle, rgba(26,122,74,0.12) 0%, transparent 65%)",
+              width: 700, height: 700,
+              background: "radial-gradient(circle, rgba(26,122,74,0.10) 0%, transparent 65%)",
               filter: "blur(80px)",
             }} />
 
-            <div className="relative z-10 flex flex-col items-center text-center" style={{ maxWidth: 560 }}>
-              {/* Icon */}
+            <div className="relative z-10 flex flex-col items-center text-center" style={{ maxWidth: 580 }}>
               <motion.div
                 initial={{ scale: 0.7, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.15, type: "spring", stiffness: 200 }}
+                transition={{ duration: 0.5, delay: 0.1, type: "spring", stiffness: 220 }}
                 style={{
-                  width: 88, height: 88, borderRadius: 24,
-                  background: "rgba(26,122,74,0.18)", border: "1px solid rgba(52,211,153,0.3)",
+                  width: 80, height: 80, borderRadius: 22,
+                  background: "rgba(26,122,74,0.15)", border: "1px solid rgba(52,211,153,0.25)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  marginBottom: 28, boxShadow: "0 8px 32px rgba(26,122,74,0.25)",
+                  marginBottom: 32, boxShadow: "0 8px 40px rgba(26,122,74,0.20)",
                 }}
               >
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
                   <path d="M20 6L9 17L4 12" stroke="#34D399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </motion.div>
 
+              <motion.p
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.18 }}
+                style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, fontWeight: 500, color: "rgba(52,211,153,0.7)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}
+              >
+                Application Received
+              </motion.p>
+
               <motion.h1
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.25 }}
+                transition={{ duration: 0.5, delay: 0.22 }}
                 style={{
                   fontFamily: "'Inter', sans-serif",
-                  fontWeight: 400,
-                  fontSize: "clamp(32px, 5vw, 52px)",
+                  fontWeight: 300,
+                  fontSize: "clamp(34px, 5vw, 54px)",
                   color: "#FFFFFF",
                   letterSpacing: "-0.04em",
-                  marginBottom: 16,
-                  lineHeight: 1.08,
+                  marginBottom: 18,
+                  lineHeight: 1.06,
                 }}
               >
-                Application received.
+                You're on our radar.
               </motion.h1>
 
               <motion.p
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.35 }}
+                transition={{ duration: 0.5, delay: 0.30 }}
                 style={{
                   fontFamily: "'Inter', sans-serif",
-                  fontSize: 16,
-                  color: "rgba(255,255,255,0.55)",
-                  lineHeight: 1.7,
+                  fontSize: 15,
+                  color: "rgba(255,255,255,0.45)",
+                  lineHeight: 1.75,
                   fontWeight: 300,
-                  marginBottom: 36,
+                  marginBottom: 44,
+                  maxWidth: 440,
                 }}
               >
-                We review every application personally. If you're a fit for our network, you'll hear from us within 48 hours. Keep an eye on your inbox.
+                Every application is reviewed personally. If you're the kind of engineer we work with, you'll hear from us within 48 hours. Keep an eye on your inbox.
               </motion.p>
 
               <motion.div
-                style={{ width: "100%", height: 2, background: "linear-gradient(90deg, transparent, #34D399, #1A7A4A, transparent)", borderRadius: 2, marginBottom: 36 }}
-                initial={{ scaleX: 0, originX: 0 }}
+                style={{ width: "100%", height: 1, background: "linear-gradient(90deg, transparent, rgba(52,211,153,0.4), rgba(26,122,74,0.35), transparent)", borderRadius: 1, marginBottom: 44 }}
+                initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
-                transition={{ duration: 1.8, ease: "easeOut", delay: 0.5 }}
+                transition={{ duration: 1.6, ease: "easeOut", delay: 0.45 }}
               />
 
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.4, delay: 0.6 }}
+                transition={{ duration: 0.4, delay: 0.55 }}
                 className="flex flex-col sm:flex-row gap-3 items-center"
               >
                 <button
-                  onClick={() => navigate("/")}
+                  type="button"
+                  onClick={() => { window.location.href = import.meta.env.BASE_URL || "/"; }}
                   style={{
-                    background: "rgba(255,255,255,0.08)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    color: "rgba(255,255,255,0.75)",
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    color: "rgba(255,255,255,0.65)",
                     borderRadius: 12, padding: "12px 28px",
                     fontFamily: "Inter, sans-serif", fontSize: 14, cursor: "pointer",
                     transition: "all 0.2s",
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "#FFFFFF"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "rgba(255,255,255,0.75)"; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.10)"; e.currentTarget.style.color = "#FFFFFF"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(255,255,255,0.65)"; }}
                 >
                   ← Back to Bridigix
                 </button>
-                <span style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "rgba(255,255,255,0.30)" }}>
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "rgba(255,255,255,0.25)" }}>
                   Questions?{" "}
-                  <a href="mailto:hareem@bridigix.org" style={{ color: "#34D399", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                  <a href="mailto:hareem@bridigix.org" style={{ color: "rgba(52,211,153,0.7)", textDecoration: "underline", textUnderlineOffset: 2 }}>
                     hareem@bridigix.org
                   </a>
                 </span>
@@ -516,7 +655,8 @@ export default function JoinPage() {
           {/* Back button */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} className="mb-6">
             <button
-              onClick={() => navigate("/")}
+              type="button"
+              onClick={() => { window.location.href = import.meta.env.BASE_URL || "/"; }}
               className="flex items-center gap-2 cursor-pointer transition-all duration-200"
               style={{
                 background: "none", border: "none", padding: "6px 0",
@@ -554,199 +694,214 @@ export default function JoinPage() {
               const isActive = n === step;
               const isDone = n < step;
               return (
-                <div key={label} className="flex-1 flex flex-col items-center">
-                  <div className="flex items-center w-full">
-                    {i > 0 && <div className="flex-1 h-px transition-all duration-500" style={{ background: isDone ? "#1A7A4A" : "#E8E8E8" }} />}
+                <div key={n} className="flex items-center flex-1 last:flex-none">
+                  <div className="flex flex-col items-center">
                     <div style={{
-                      width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                      background: isDone ? "#1A7A4A" : isActive ? "#0A0A0A" : "transparent",
-                      border: isDone || isActive ? "none" : "1.5px solid #D0D0D0",
+                      width: 32, height: 32, borderRadius: "50%",
+                      background: isDone ? "#1A7A4A" : isActive ? "#0A0A0A" : "#E8E8E8",
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      transition: "all 0.35s ease",
-                      boxShadow: isActive ? "0 2px 12px rgba(0,0,0,0.15)" : isDone ? "0 2px 10px rgba(26,122,74,0.25)" : "none",
+                      transition: "all 0.3s",
                     }}>
                       {isDone ? (
-                        <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5L4.5 8.5L11 1.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                          <path d="M2.5 7L5.5 10L11.5 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
                       ) : (
-                        <span style={{ fontSize: 11, fontFamily: "'Inter', sans-serif", fontWeight: 500, color: isActive ? "white" : "#B0B0B0" }}>{n}</span>
+                        <span style={{ fontFamily: "Inter, sans-serif", fontSize: 13, fontWeight: 500, color: isActive ? "white" : "#9B9B9B" }}>{n}</span>
                       )}
                     </div>
-                    {i < 2 && <div className="flex-1 h-px transition-all duration-500" style={{ background: isDone ? "#1A7A4A" : "#E8E8E8" }} />}
+                    <span style={{
+                      fontFamily: "Inter, sans-serif", fontSize: 11,
+                      color: isActive ? "#0A0A0A" : isDone ? "#1A7A4A" : "#9B9B9B",
+                      fontWeight: isActive ? 500 : 400,
+                      marginTop: 6,
+                      whiteSpace: "nowrap",
+                    }}>{label}</span>
                   </div>
-                  <span className="text-[11px] mt-1.5" style={{
-                    fontFamily: "'Inter', sans-serif",
-                    color: isActive ? "#0A0A0A" : "#9B9B9B",
-                    fontWeight: isActive ? 500 : 400,
-                  }}>{label}</span>
+                  {i < stepLabels.length - 1 && (
+                    <div className="flex-1 mx-3 mb-5" style={{ height: 1, background: isDone ? "#1A7A4A" : "#E8E8E8", transition: "background 0.3s" }} />
+                  )}
                 </div>
               );
             })}
           </div>
 
           {/* Form card */}
-          <div className="bg-white rounded-[24px] p-8 md:p-12" style={{ border: "1px solid rgba(0,0,0,0.07)", boxShadow: "0 4px 32px rgba(0,0,0,0.06)" }}>
-            <AnimatePresence mode="wait">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, x: 18 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -18 }}
+              transition={{ duration: 0.3 }}
+              className="rounded-[20px] p-8 md:p-10"
+              style={{ background: "#FFFFFF", border: "1px solid #F0F0EE", boxShadow: "0 4px 32px rgba(0,0,0,0.05)" }}
+            >
               {step === 1 && (
-                <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
-                  <h2 style={{ fontFamily: "'Inter', sans-serif", fontWeight: 500, fontSize: 18, color: "#0A0A0A", marginBottom: 28, letterSpacing: "-0.02em" }}>
-                    About you
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <Field label="Full Name" error={errors.name}>
-                      <input value={form.name} onChange={set("name")} placeholder="Your full name" style={inputStyle(!!errors.name)}
+                <div className="flex flex-col gap-6">
+                  <h2 style={{ fontFamily: "'Inter', sans-serif", fontWeight: 500, fontSize: 18, color: "#0A0A0A", letterSpacing: "-0.02em" }}>About You</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Field label="Full name" error={errors.name}>
+                      <input value={form.name} onChange={set("name")} placeholder="Alex Johnson" style={{ ...inputStyle(!!errors.name), borderColor: errors.name ? "#E05050" : form.name ? "#1A7A4A" : "#E8E8E8" }}
                         onFocus={e => { e.target.style.borderColor = "#1A7A4A"; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
-                        onBlur={e => { e.target.style.borderColor = errors.name ? "#E05050" : "#E8E8E8"; e.target.style.boxShadow = "none"; }}/>
+                        onBlur={e => { e.target.style.borderColor = errors.name ? "#E05050" : form.name ? "#1A7A4A" : "#E8E8E8"; e.target.style.boxShadow = "none"; }}
+                      />
                     </Field>
-                    <Field label="Email" error={errors.email}>
-                      <input type="email" value={form.email} onChange={set("email")} placeholder="your@email.com" style={inputStyle(!!errors.email)}
+                    <Field label="Email address" error={errors.email}>
+                      <input type="email" value={form.email} onChange={set("email")} placeholder="alex@example.com" style={{ ...inputStyle(!!errors.email) }}
                         onFocus={e => { e.target.style.borderColor = "#1A7A4A"; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
-                        onBlur={e => { e.target.style.borderColor = errors.email ? "#E05050" : "#E8E8E8"; e.target.style.boxShadow = "none"; }}/>
-                    </Field>
-                    <Field label="Location" optional>
-                      <input value={form.location} onChange={set("location")} placeholder="City, Country" style={inputStyle()}
-                        onFocus={e => { e.target.style.borderColor = "#1A7A4A"; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
-                        onBlur={e => { e.target.style.borderColor = "#E8E8E8"; e.target.style.boxShadow = "none"; }}/>
-                    </Field>
-                    <Field label="Years of Experience">
-                      <CustomSelect options={EXPERIENCE} value={form.experience} onChange={v => setForm(f => ({ ...f, experience: v }))} />
-                    </Field>
-                  </div>
-
-                  <div className="mt-5">
-                    <Field label="Primary Role" error={errors.role}>
-                      <CustomSelect
-                        options={ROLES}
-                        value={form.role}
-                        onChange={v => setForm(f => ({ ...f, role: v }))}
-                        placeholder="Select your primary role"
-                        error={!!errors.role}
+                        onBlur={e => { e.target.style.borderColor = errors.email ? "#E05050" : "#E8E8E8"; e.target.style.boxShadow = "none"; }}
                       />
                     </Field>
                   </div>
-
+                  <Field label="Location" optional>
+                    <input value={form.location} onChange={set("location")} placeholder="London, UK / Remote" style={inputStyle()}
+                      onFocus={e => { e.target.style.borderColor = "#1A7A4A"; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
+                      onBlur={e => { e.target.style.borderColor = "#E8E8E8"; e.target.style.boxShadow = "none"; }}
+                    />
+                  </Field>
+                  <Field label="Primary role" error={errors.role}>
+                    <CustomSelect options={ROLES} value={form.role} onChange={v => setForm(f => ({ ...f, role: v }))} error={!!errors.role} />
+                  </Field>
                   {form.role === "Other" && (
-                    <div className="mt-5">
-                      <Field label="Describe your role" error={errors.otherRole}>
-                        <input value={form.otherRole} onChange={set("otherRole")} placeholder="e.g. Security Engineer, Data Scientist..." style={inputStyle(!!errors.otherRole)}
-                          onFocus={e => { e.target.style.borderColor = "#1A7A4A"; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
-                          onBlur={e => { e.target.style.borderColor = errors.otherRole ? "#E05050" : "#E8E8E8"; e.target.style.boxShadow = "none"; }}/>
-                      </Field>
-                    </div>
+                    <Field label="Describe your role" error={errors.otherRole}>
+                      <input value={form.otherRole} onChange={set("otherRole")} placeholder="e.g. Site Reliability Engineer" style={inputStyle(!!errors.otherRole)}
+                        onFocus={e => { e.target.style.borderColor = "#1A7A4A"; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
+                        onBlur={e => { e.target.style.borderColor = errors.otherRole ? "#E05050" : "#E8E8E8"; e.target.style.boxShadow = "none"; }}
+                      />
+                    </Field>
                   )}
-
-                  <div className="mt-8">
-                    <button type="button" onClick={handleNext}
-                      className="w-full cursor-pointer transition-all duration-200"
-                      style={{
-                        background: "#0A0A0A", color: "#FFFFFF", borderRadius: 14,
-                        padding: "15px", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: 15, border: "none",
-                        boxShadow: "0 2px 12px rgba(0,0,0,0.12)",
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#1A7A4A"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(26,122,74,0.30)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "#0A0A0A"; e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.12)"; }}
-                    >Continue →</button>
-                  </div>
-                </motion.div>
+                  <Field label="Years of experience">
+                    <CustomSelect options={EXPERIENCE} value={form.experience} onChange={v => setForm(f => ({ ...f, experience: v }))} />
+                  </Field>
+                </div>
               )}
 
               {step === 2 && (
-                <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }} className="flex flex-col gap-6">
-                  <h2 style={{ fontFamily: "'Inter', sans-serif", fontWeight: 500, fontSize: 18, color: "#0A0A0A", marginBottom: 4, letterSpacing: "-0.02em" }}>
-                    Your work
-                  </h2>
-                  <Field label="Core Skills" error={errors.skills} hint="Type to search from hundreds of skills or press Enter to add custom ones">
+                <div className="flex flex-col gap-6">
+                  <h2 style={{ fontFamily: "'Inter', sans-serif", fontWeight: 500, fontSize: 18, color: "#0A0A0A", letterSpacing: "-0.02em" }}>Your Work</h2>
+                  <Field label="Skills & Technologies" error={errors.skills} hint="Search across 250+ technologies by category, or add your own">
                     <SkillsInput value={form.skills} onChange={v => setForm(f => ({ ...f, skills: v }))} />
                   </Field>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <Field label="GitHub or Portfolio" optional>
-                      <input value={form.github} onChange={set("github")} placeholder="github.com/yourhandle" style={inputStyle()}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Field label="GitHub profile" optional>
+                      <input value={form.github} onChange={set("github")} placeholder="github.com/username" style={inputStyle()}
                         onFocus={e => { e.target.style.borderColor = "#1A7A4A"; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
-                        onBlur={e => { e.target.style.borderColor = "#E8E8E8"; e.target.style.boxShadow = "none"; }}/>
+                        onBlur={e => { e.target.style.borderColor = "#E8E8E8"; e.target.style.boxShadow = "none"; }}
+                      />
                     </Field>
                     <Field label="LinkedIn" optional>
-                      <input value={form.linkedin} onChange={set("linkedin")} placeholder="linkedin.com/in/yourprofile" style={inputStyle()}
+                      <input value={form.linkedin} onChange={set("linkedin")} placeholder="linkedin.com/in/username" style={inputStyle()}
                         onFocus={e => { e.target.style.borderColor = "#1A7A4A"; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
-                        onBlur={e => { e.target.style.borderColor = "#E8E8E8"; e.target.style.boxShadow = "none"; }}/>
+                        onBlur={e => { e.target.style.borderColor = "#E8E8E8"; e.target.style.boxShadow = "none"; }}
+                      />
                     </Field>
                   </div>
-                  <Field label="Tell us about your best project" optional>
-                    <textarea value={form.project} onChange={set("project")}
-                      placeholder="What did you build, what was your role, and what impact did it have?"
-                      rows={5} style={{ ...inputStyle(), resize: "none", minHeight: 130 }}
+                  <Field label="Link to a project or portfolio" optional>
+                    <input value={form.project} onChange={set("project")} placeholder="yoursite.com or github.com/project" style={inputStyle()}
                       onFocus={e => { e.target.style.borderColor = "#1A7A4A"; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
-                      onBlur={e => { e.target.style.borderColor = "#E8E8E8"; e.target.style.boxShadow = "none"; }}/>
+                      onBlur={e => { e.target.style.borderColor = "#E8E8E8"; e.target.style.boxShadow = "none"; }}
+                    />
                   </Field>
-                  <Field label="What kind of environment do you thrive in?">
+                  <Field label="Environment you thrive in" optional>
                     <PillToggle options={ENVIRONMENTS} value={form.environment} onChange={v => setForm(f => ({ ...f, environment: v as string }))} />
                   </Field>
-                  <div className="flex items-center justify-between mt-2">
-                    <button type="button" onClick={() => { setErrors({}); setStep(1); }}
-                      style={{ background: "none", border: "none", fontFamily: "Inter, sans-serif", fontSize: 14, color: "#6B6B6B", cursor: "pointer" }}>
-                      ← Back
-                    </button>
-                    <button type="button" onClick={handleNext}
-                      className="cursor-pointer transition-all duration-200"
-                      style={{ background: "#0A0A0A", color: "#FFFFFF", borderRadius: 14, padding: "13px 32px", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: 15, border: "none", boxShadow: "0 2px 12px rgba(0,0,0,0.12)" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#1A7A4A"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(26,122,74,0.30)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "#0A0A0A"; e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.12)"; }}>
-                      Continue →
-                    </button>
-                  </div>
-                </motion.div>
+                </div>
               )}
 
               {step === 3 && (
-                <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }} className="flex flex-col gap-6">
-                  <h2 style={{ fontFamily: "'Inter', sans-serif", fontWeight: 500, fontSize: 18, color: "#0A0A0A", marginBottom: 4, letterSpacing: "-0.02em" }}>
-                    Availability
-                  </h2>
-                  <Field label="Current Status" error={errors.status}>
+                <div className="flex flex-col gap-6">
+                  <h2 style={{ fontFamily: "'Inter', sans-serif", fontWeight: 500, fontSize: 18, color: "#0A0A0A", letterSpacing: "-0.02em" }}>Availability</h2>
+                  <Field label="Current status" error={errors.status}>
                     <PillToggle options={STATUS_OPTIONS} value={form.status} onChange={v => setForm(f => ({ ...f, status: v as string }))} />
-                    {errors.status && <span style={{ fontFamily: "Inter, sans-serif", fontSize: 11, color: "#E05050" }}>{errors.status}</span>}
+                    {errors.status && <span className="text-[11px] text-[#E05050]" style={{ fontFamily: "'Inter', sans-serif" }}>{errors.status}</span>}
                   </Field>
-                  <Field label="When can you start?">
-                    <CustomSelect options={AVAILABILITY} value={form.availability} onChange={v => setForm(f => ({ ...f, availability: v }))} />
+                  <Field label="Available from">
+                    <PillToggle options={AVAILABILITY} value={form.availability} onChange={v => setForm(f => ({ ...f, availability: v as string }))} />
                   </Field>
-                  <Field label="Preferred Work Type">
+                  <Field label="Open to" optional>
                     <PillToggle options={WORK_TYPES} value={form.workType} onChange={v => setForm(f => ({ ...f, workType: v as string[] }))} multi />
                   </Field>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <Field label="Salary Expectation" optional hint="Stays confidential. Helps us match you to the right roles.">
-                      <input value={form.salary} onChange={set("salary")} placeholder="e.g. £70k–£90k or $120k+" style={inputStyle()}
-                        onFocus={e => { e.target.style.borderColor = "#1A7A4A"; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
-                        onBlur={e => { e.target.style.borderColor = "#E8E8E8"; e.target.style.boxShadow = "none"; }}/>
-                    </Field>
-                  </div>
-                  <Field label="Anything else you'd like us to know?" optional>
-                    <textarea value={form.notes} onChange={set("notes")}
-                      placeholder="Previous companies, what you're looking for, anything relevant."
-                      rows={4} style={{ ...inputStyle(), resize: "none", minHeight: 110 }}
+                  <Field label="Expected salary or rate" optional>
+                    <input value={form.salary} onChange={set("salary")} placeholder="e.g. £80–95k / $150/day" style={inputStyle()}
                       onFocus={e => { e.target.style.borderColor = "#1A7A4A"; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
-                      onBlur={e => { e.target.style.borderColor = "#E8E8E8"; e.target.style.boxShadow = "none"; }}/>
+                      onBlur={e => { e.target.style.borderColor = "#E8E8E8"; e.target.style.boxShadow = "none"; }}
+                    />
                   </Field>
-                  <div className="flex items-center justify-between mt-2">
-                    <button type="button" onClick={() => { setErrors({}); setStep(2); }}
-                      style={{ background: "none", border: "none", fontFamily: "Inter, sans-serif", fontSize: 14, color: "#6B6B6B", cursor: "pointer" }}>
-                      ← Back
-                    </button>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
-                      {submitError && (
-                        <p style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "#E05050", textAlign: "right" }}>
-                          {submitError}
-                        </p>
-                      )}
-                      <button type="button" onClick={handleSubmit} disabled={submitting}
-                        className="cursor-pointer transition-all duration-200"
-                        style={{ background: submitting ? "#6B6B6B" : "#1A7A4A", color: "#FFFFFF", borderRadius: 14, padding: "13px 32px", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: 15, border: "none", boxShadow: "0 4px 20px rgba(26,122,74,0.30)", cursor: submitting ? "not-allowed" : "pointer" }}
-                        onMouseEnter={e => { if (!submitting) { e.currentTarget.style.background = "#155E39"; e.currentTarget.style.boxShadow = "0 6px 28px rgba(26,122,74,0.42)"; } }}
-                        onMouseLeave={e => { if (!submitting) { e.currentTarget.style.background = "#1A7A4A"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(26,122,74,0.30)"; } }}>
-                        {submitting ? "Submitting..." : "Submit Application"}
-                      </button>
+                  <Field label="Anything else you'd like us to know?" optional>
+                    <textarea value={form.notes} onChange={set("notes")} rows={4} placeholder="Visa status, remote preferences, notice period, etc."
+                      style={{ ...inputStyle(), resize: "vertical", minHeight: 100 }}
+                      onFocus={e => { e.target.style.borderColor = "#1A7A4A"; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
+                      onBlur={e => { e.target.style.borderColor = "#E8E8E8"; e.target.style.boxShadow = "none"; }}
+                    />
+                  </Field>
+
+                  {submitError && (
+                    <div className="rounded-[10px] px-4 py-3" style={{ background: "rgba(224,80,80,0.06)", border: "1px solid rgba(224,80,80,0.15)" }}>
+                      <p style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "#E05050" }}>{submitError}</p>
                     </div>
-                  </div>
-                </motion.div>
+                  )}
+                </div>
               )}
-            </AnimatePresence>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Navigation */}
+          <div className="flex justify-between mt-6">
+            <button
+              type="button"
+              onClick={() => {
+                if (step === 1) {
+                  window.location.href = import.meta.env.BASE_URL || "/";
+                } else {
+                  setStep(s => s - 1);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              style={{
+                background: "none", border: "1px solid #E8E8E8", borderRadius: 12,
+                padding: "12px 24px", fontFamily: "Inter, sans-serif", fontSize: 14,
+                color: "#6B6B6B", cursor: "pointer", transition: "all 0.2s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "#0A0A0A"; e.currentTarget.style.color = "#0A0A0A"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E8E8E8"; e.currentTarget.style.color = "#6B6B6B"; }}
+            >
+              {step === 1 ? "← Home" : "← Back"}
+            </button>
+
+            {step < 3 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                style={{
+                  background: "#0A0A0A", border: "none", borderRadius: 12,
+                  padding: "12px 28px", fontFamily: "Inter, sans-serif", fontSize: 14,
+                  color: "white", cursor: "pointer", fontWeight: 500, transition: "all 0.2s",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.14)",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#1A7A4A"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(26,122,74,0.30)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "#0A0A0A"; e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.14)"; }}
+              >
+                Continue →
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                style={{
+                  background: submitting ? "#9B9B9B" : "#1A7A4A",
+                  border: "none", borderRadius: 12,
+                  padding: "12px 28px", fontFamily: "Inter, sans-serif", fontSize: 14,
+                  color: "white", cursor: submitting ? "wait" : "pointer", fontWeight: 500, transition: "all 0.2s",
+                  boxShadow: submitting ? "none" : "0 4px 20px rgba(26,122,74,0.28)",
+                }}
+                onMouseEnter={e => { if (!submitting) { e.currentTarget.style.boxShadow = "0 6px 28px rgba(26,122,74,0.45)"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = submitting ? "none" : "0 4px 20px rgba(26,122,74,0.28)"; e.currentTarget.style.transform = "none"; }}
+              >
+                {submitting ? "Submitting..." : "Submit Application →"}
+              </button>
+            )}
           </div>
         </div>
       </main>

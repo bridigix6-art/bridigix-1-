@@ -5,7 +5,19 @@ import logoImage from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.edit
 interface Message { role: "user" | "assistant"; content: string; }
 interface ChatModalProps { open: boolean; onClose: () => void; }
 
-const FIRST_MESSAGE = "Tell me a bit about what you're building — what does your company do?";
+const FIRST_MESSAGE_VARIANTS = [
+  "Tell me a bit about what you're building — what does your company do?",
+  "Let's start from the top — what are you building, and what problem does it solve?",
+  "Before we get into the role, give me a sense of the company — what are you working on?",
+  "Start me off with the basics — what does your company do and who is it built for?",
+  "What's the product, and what stage are you at? Give me the short version first.",
+  "Tell me about the company — what are you building and what problem are you solving?",
+  "What does your company do? Walk me through what you're building.",
+];
+
+function pickFirstMessage(): string {
+  return FIRST_MESSAGE_VARIANTS[Math.floor(Math.random() * FIRST_MESSAGE_VARIANTS.length)];
+}
 const LS_KEY = "bridigix_chat";
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 const COOKIE_KEY = "bridigix_tz";
@@ -917,7 +929,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
     setInteractiveUsed(new Set());
     setSessionPhase("chat");
     setTimeout(() => {
-      setMessages([{ role: "assistant", content: FIRST_MESSAGE }]);
+      setMessages([{ role: "assistant", content: pickFirstMessage() }]);
       setLatestAiIndex(0);
     }, 400);
   }
