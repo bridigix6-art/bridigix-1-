@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { flushSync } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import logoImage from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -885,6 +887,9 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const isListeningRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const chatAreaRef = useRef<HTMLDivElement>(null);
+  // Track uploaded URLs so we can pass them to complete-intake on confirm
+  const screenshotUrlRef = useRef<string | null>(null);
 
   const spec = liveSpec;
 
@@ -1043,20 +1048,152 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
     }).catch(() => {});
   }
 
+  // ─── Screenshot the chat area and upload to Supabase Storage ────────────────
+  async function captureAndUploadScreenshot(): Promise<string | null> {
+    const el = chatAreaRef.current;
+    if (!el) return null;
+    try {
+      const canvas = await html2canvas(el, {
+        backgroundColor: "#FAFAF8",
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+      });
+      const dataUrl = canvas.toDataURL("image/png");
+      const res = await fetch("/api/upload-artifact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, type: "screenshot", dataUrl }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json() as { ok?: boolean; url?: string };
+      return data.url ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  // ─── Generate hiring brief PDF and upload to Supabase Storage ────────────────
+  async function generateAndUploadPdf(brief: HiringBrief): Promise<string | null> {
+    try {
+      const doc = new jsPDF({ unit: "mm", format: "a4" });
+      const pageW = 210;
+      const margin = 18;
+      const contentW = pageW - margin * 2;
+      let y = 20;
+
+      // Title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.setTextColor(26, 122, 74);
+      doc.text("Hiring Brief", margin, y);
+      y += 8;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text(`Confirmed via Bridgix · ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}`, margin, y);
+      if (detectedEmail) {
+        doc.text(`Client: ${detectedEmail}`, margin + contentW - doc.getTextWidth(`Client: ${detectedEmail}`), y);
+      }
+      y += 6;
+
+      // Divider
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.3);
+      doc.line(margin, y, pageW - margin, y);
+      y += 8;
+
+      const FIELDS: Array<[string, keyof HiringBrief]> = [
+        ["Company Context", "companyContext"],
+        ["Role", "role"],
+        ["Seniority & Ownership", "seniorityOwnership"],
+        ["Past Hiring Signal", "pastHiringSignal"],
+        ["Work Style & Culture", "workStyleCulture"],
+        ["Requirements", "requirements"],
+        ["Timeline", "timeline"],
+        ["Budget", "budget"],
+        ["Contact", "contact"],
+        ["Notable Quotes or Context", "notableQuotes"],
+        ["Open Questions or Flags", "openFlags"],
+        ["Recruiter Notes", "recruiterNotes"],
+      ];
+
+      for (const [label, key] of FIELDS) {
+        const val = brief[key];
+        if (!val || val === "N/A" || val.trim() === "") continue;
+
+        // Check if we need a new page
+        if (y > 265) {
+          doc.addPage();
+          y = 20;
+        }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(26, 122, 74);
+        doc.text(label.toUpperCase(), margin, y);
+        y += 5;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(30, 30, 30);
+        const lines = doc.splitTextToSize(val, contentW);
+        for (const line of lines) {
+          if (y > 272) { doc.addPage(); y = 20; }
+          doc.text(line, margin, y);
+          y += 5;
+        }
+        y += 4;
+      }
+
+      const pdfDataUrl = doc.output("datauristring");
+      const res = await fetch("/api/upload-artifact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, type: "pdf", dataUrl: pdfDataUrl }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json() as { ok?: boolean; url?: string };
+      return data.url ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   // Handle founder confirming the edited brief
   async function handleBriefConfirm(edited: HiringBrief) {
     setReviewSaving(true);
     try {
-      await fetch("/api/save-hiring-brief", {
+      // 1. Generate PDF of confirmed brief and upload
+      const pdfUrl = await generateAndUploadPdf(edited);
+
+      // 2. Record to completed_intakes (ties sessionId → screenshot + PDF)
+      await fetch("/api/complete-intake", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: detectedEmail,
           sessionId,
-          brief: edited,
-          status: "confirmed",
+          email: detectedEmail,
+          screenshotUrl: screenshotUrlRef.current,
+          pdfUrl,
         }),
-      });
+      }).catch(() => {});
+
+      // 3. Also update chat_conversations status for load-chat recovery
+      if (detectedEmail || sessionId) {
+        await fetch("/api/save-hiring-brief", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: detectedEmail,
+            sessionId,
+            brief: edited,
+            status: "confirmed",
+          }),
+        }).catch(() => {});
+      }
     } catch { /* non-fatal */ }
     setHiringBrief(edited);
     setReviewSaving(false);
@@ -1131,6 +1268,14 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
         // Parse the brief and transition to review screen
         const parsed = parseIntakeComplete(reply);
+
+        // Fire-and-forget screenshot capture after a short delay (let DOM settle)
+        setTimeout(() => {
+          captureAndUploadScreenshot().then(url => {
+            screenshotUrlRef.current = url;
+          }).catch(() => {});
+        }, 600);
+
         setTimeout(() => {
           setHiringBrief(parsed);
           setSessionPhase("review");
@@ -1303,7 +1448,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
               {/* Chat area — shown when sessionPhase === "chat" */}
               {sessionPhase !== "review" && (
-                <div className="max-w-[780px] mx-auto px-6 py-8 flex flex-col h-full">
+                <div ref={chatAreaRef} className="max-w-[780px] mx-auto px-6 py-8 flex flex-col h-full">
 
                   {showNoConversation && (
                     <div className="flex-1 flex flex-col items-center justify-center text-center">

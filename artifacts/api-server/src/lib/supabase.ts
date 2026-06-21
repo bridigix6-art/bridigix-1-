@@ -1,44 +1,49 @@
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env["SUPABASE_URL"] ?? "";
-const supabaseKey = process.env["SUPABASE_ANON_KEY"] ?? "";
+const supabaseAnonKey = process.env["SUPABASE_ANON_KEY"] ?? "";
+const supabaseServiceKey = process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? supabaseAnonKey;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Service-role client — used for storage uploads and admin operations
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function initializeDatabase() {
-  const sql = `
-    CREATE TABLE IF NOT EXISTS chat_conversations (
-      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-      email TEXT,
-      messages JSONB,
-      ip_address TEXT,
-      user_agent TEXT,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
-    );
+  // Create tables via supabase-js insert/select patterns (no raw SQL RPC needed)
+  // completed_intakes: lightweight lookup table for confirmed briefs
+  const { error: ciError } = await supabaseAdmin
+    .from("completed_intakes")
+    .select("id")
+    .limit(1);
 
-    CREATE TABLE IF NOT EXISTS join_applications (
-      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-      name TEXT,
-      email TEXT,
-      form_data JSONB,
-      ip_address TEXT,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
+  if (ciError && ciError.code === "42P01") {
+    // Table doesn't exist — create it via management API
+    const projectRef = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1];
+    if (projectRef) {
+      const sql = `
+        CREATE TABLE IF NOT EXISTS completed_intakes (
+          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+          session_id TEXT,
+          email TEXT,
+          screenshot_url TEXT,
+          pdf_url TEXT,
+          stage TEXT DEFAULT 'complete',
+          confirmed_at TIMESTAMPTZ DEFAULT NOW(),
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS completed_intakes_email_idx ON completed_intakes(email);
+        CREATE INDEX IF NOT EXISTS completed_intakes_session_idx ON completed_intakes(session_id);
+      `;
 
-    CREATE TABLE IF NOT EXISTS visitor_sessions (
-      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-      ip_address TEXT,
-      timezone TEXT,
-      country TEXT,
-      city TEXT,
-      user_agent TEXT,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-  `;
-
-  const { error } = await supabase.rpc("exec_sql", { query: sql });
-  if (error) {
-    console.error("DB init error (tables may already exist):", error.message);
+      await fetch(`https://api.supabase.com/v1/projects/${projectRef}/database/query`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${supabaseServiceKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ query: sql }),
+      });
+    }
   }
 }

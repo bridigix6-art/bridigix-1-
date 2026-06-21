@@ -3,6 +3,7 @@ import healthRouter from "./health";
 import chatRouter from "./chat";
 import chatPersistenceRouter from "./chatPersistence";
 import adminRouter from "./admin";
+import storageRouter from "./storage";
 
 const router: IRouter = Router();
 
@@ -10,5 +11,6 @@ router.use(healthRouter);
 router.use(chatRouter);
 router.use(chatPersistenceRouter);
 router.use(adminRouter);
+router.use(storageRouter);
 
 export default router;
