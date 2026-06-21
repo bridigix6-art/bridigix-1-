@@ -3,11 +3,13 @@ import { supabase } from "../lib/supabase";
 
 const router = Router();
 
+// ─── Save chat (keyed by email, select+update/insert) ─────────────────────────
 router.post("/save-chat", async (req, res) => {
   try {
-    const { email, messages } = req.body as {
+    const { email, messages, sessionId } = req.body as {
       email: string;
       messages: Array<{ role: string; content: string }>;
+      sessionId?: string;
     };
 
     if (!email || !Array.isArray(messages)) {
@@ -17,36 +19,50 @@ router.post("/save-chat", async (req, res) => {
 
     const normalizedEmail = email.toLowerCase().trim();
     const ipAddress = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
-      || req.socket.remoteAddress
-      || "";
+      || req.socket.remoteAddress || "";
     const userAgent = req.headers["user-agent"] ?? "";
 
-    const { data: existing } = await supabase
+    // Try to find by email first, then session_id
+    let existing = null;
+    const { data: byEmail } = await supabase
       .from("chat_conversations")
       .select("id")
       .eq("email", normalizedEmail)
       .maybeSingle();
+    existing = byEmail;
+
+    if (!existing && sessionId) {
+      const { data: bySession } = await supabase
+        .from("chat_conversations")
+        .select("id")
+        .eq("session_id", sessionId)
+        .maybeSingle();
+      existing = bySession;
+    }
 
     let error;
     if (existing) {
       const { error: updateErr } = await supabase
         .from("chat_conversations")
         .update({
+          email: normalizedEmail,
           messages,
           ip_address: ipAddress,
           user_agent: userAgent,
           updated_at: new Date().toISOString(),
         })
-        .eq("email", normalizedEmail);
+        .eq("id", existing.id);
       error = updateErr;
     } else {
       const { error: insertErr } = await supabase
         .from("chat_conversations")
         .insert({
           email: normalizedEmail,
+          session_id: sessionId ?? null,
           messages,
           ip_address: ipAddress,
           user_agent: userAgent,
+          status: "in_progress",
           updated_at: new Date().toISOString(),
         });
       error = insertErr;
@@ -65,6 +81,7 @@ router.post("/save-chat", async (req, res) => {
   }
 });
 
+// ─── Load chat (only returns completed intakes by email) ──────────────────────
 router.get("/load-chat", async (req, res) => {
   try {
     const { email } = req.query as { email?: string };
@@ -75,8 +92,11 @@ router.get("/load-chat", async (req, res) => {
 
     const { data, error } = await supabase
       .from("chat_conversations")
-      .select("messages")
+      .select("messages, intake_summary, status")
       .eq("email", email.toLowerCase().trim())
+      .eq("status", "complete")
+      .order("updated_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (error) {
@@ -85,13 +105,133 @@ router.get("/load-chat", async (req, res) => {
       return;
     }
 
-    res.json(data ?? { messages: [] });
+    // Only return if messages actually exist and intake is complete
+    const messages = data?.messages;
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      res.json({ found: false });
+      return;
+    }
+
+    res.json({ found: true, messages, intakeSummary: data?.intake_summary ?? null });
   } catch (err) {
     req.log.error({ err }, "Unexpected load-chat error");
     res.status(500).json({ error: "Failed to load chat" });
   }
 });
 
+// ─── Save hiring brief (structured, called after founder confirms review) ─────
+router.post("/save-hiring-brief", async (req, res) => {
+  try {
+    const { email, sessionId, brief, status } = req.body as {
+      email?: string;
+      sessionId?: string;
+      brief: {
+        companyContext: string;
+        role: string;
+        seniorityOwnership: string;
+        pastHiringSignal: string;
+        workStyleCulture: string;
+        requirements: string;
+        timeline: string;
+        budget: string;
+        contact: string;
+        notableQuotes: string;
+        openFlags: string;
+        rawIntake?: string;
+      };
+      status?: string;
+    };
+
+    if (!brief) {
+      res.status(400).json({ error: "brief is required" });
+      return;
+    }
+
+    const briefStatus = status ?? "confirmed";
+
+    // Update the chat_conversations intake_summary to reflect the confirmed brief
+    if (email || sessionId) {
+      const query = supabase
+        .from("chat_conversations")
+        .update({
+          intake_summary: JSON.stringify(brief),
+          status: briefStatus,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (email) {
+        await query.eq("email", email.toLowerCase().trim());
+      } else if (sessionId) {
+        await query.eq("session_id", sessionId);
+      }
+    }
+
+    // Try to save to hiring_briefs table (may not exist — handled gracefully)
+    const { error: briefError } = await supabase
+      .from("hiring_briefs")
+      .insert({
+        email: email?.toLowerCase().trim() ?? null,
+        session_id: sessionId ?? null,
+        status: briefStatus,
+        company_context: brief.companyContext,
+        role: brief.role,
+        seniority_ownership: brief.seniorityOwnership,
+        past_hiring_signal: brief.pastHiringSignal,
+        work_style_culture: brief.workStyleCulture,
+        requirements: brief.requirements,
+        timeline: brief.timeline,
+        budget: brief.budget,
+        contact: brief.contact,
+        notable_quotes: brief.notableQuotes,
+        open_flags: brief.openFlags,
+        raw_intake: brief.rawIntake ?? null,
+        confirmed_at: briefStatus === "confirmed" ? new Date().toISOString() : null,
+      });
+
+    if (briefError) {
+      // hiring_briefs table may not exist yet — log but don't fail
+      req.log.warn(
+        { briefError: { code: briefError.code, message: briefError.message } },
+        "Could not save to hiring_briefs table (table may not exist yet). Intake saved to chat_conversations."
+      );
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Unexpected save-hiring-brief error");
+    res.status(500).json({ error: "Failed to save hiring brief" });
+  }
+});
+
+// ─── Track visitor session ───────────────────────────────────────────────────
+router.post("/track-session", async (req, res) => {
+  try {
+    const { timezone } = req.body as { timezone?: string };
+
+    const ipAddress = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
+      || req.socket.remoteAddress || "";
+    const userAgent = req.headers["user-agent"] ?? "";
+
+    const { error } = await supabase
+      .from("visitor_sessions")
+      .insert({
+        ip_address: ipAddress,
+        timezone: timezone ?? null,
+        user_agent: userAgent,
+      });
+
+    if (error) {
+      req.log.warn({ error }, "Failed to track visitor session");
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Unexpected track-session error");
+    res.json({ ok: true }); // Never fail the client for analytics
+  }
+});
+
+// ─── Save application ─────────────────────────────────────────────────────────
 router.post("/save-application", async (req, res) => {
   try {
     const { name, email, formData } = req.body as {
@@ -111,8 +251,7 @@ router.post("/save-application", async (req, res) => {
     }
 
     const ipAddress = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
-      || req.socket.remoteAddress
-      || "";
+      || req.socket.remoteAddress || "";
 
     const fd = (formData ?? {}) as Record<string, unknown>;
 
@@ -151,6 +290,7 @@ router.post("/save-application", async (req, res) => {
   }
 });
 
+// ─── Newsletter subscribe ─────────────────────────────────────────────────────
 router.post("/subscribe", async (req, res) => {
   try {
     const { email } = req.body as { email: string };
@@ -168,8 +308,7 @@ router.post("/subscribe", async (req, res) => {
     }
 
     const ipAddress = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
-      || req.socket.remoteAddress
-      || "";
+      || req.socket.remoteAddress || "";
 
     const { error } = await supabase
       .from("join_applications")
