@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { flushSync } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import logoImage from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
 
@@ -19,6 +20,7 @@ interface HiringBrief {
   contact: string;
   notableQuotes: string;
   openFlags: string;
+  recruiterNotes: string;
   rawIntake?: string;
 }
 
@@ -116,6 +118,7 @@ function parseIntakeComplete(text: string): HiringBrief {
     "CONTACT",
     "NOTABLE QUOTES OR CONTEXT",
     "OPEN QUESTIONS OR FLAGS",
+    "RECRUITER NOTES",
   ];
 
   const extractField = (label: string, nextLabel?: string): string => {
@@ -138,7 +141,8 @@ function parseIntakeComplete(text: string): HiringBrief {
     budget: extractField(FIELDS[7], FIELDS[8]),
     contact: extractField(FIELDS[8], FIELDS[9]),
     notableQuotes: extractField(FIELDS[9], FIELDS[10]),
-    openFlags: extractField(FIELDS[10]),
+    openFlags: extractField(FIELDS[10], FIELDS[11]),
+    recruiterNotes: extractField(FIELDS[11]),
     rawIntake: text,
   };
 }
@@ -416,6 +420,7 @@ function buildSidebarFields(brief: HiringBrief | null, spec: CandidateSpec): Bri
       { label: "Budget", value: brief.budget },
       { label: "Contact", value: brief.contact },
       { label: "Open Flags", value: brief.openFlags },
+      { label: "Recruiter Notes", value: brief.recruiterNotes },
     ].filter(f => f.value && String(f.value).trim().length > 0);
   }
   return [
@@ -624,6 +629,7 @@ const BRIEF_REVIEW_FIELDS: { key: keyof HiringBrief; label: string; hint: string
   { key: "contact", label: "Contact", hint: "Name and email for sending profiles" },
   { key: "notableQuotes", label: "Notable Context", hint: "Anything said that reveals signal not in the structured fields" },
   { key: "openFlags", label: "Open Flags", hint: "Contradictions, unclear points, or risks the team should know" },
+  { key: "recruiterNotes", label: "Recruiter Notes", hint: "Assumptions, inferences, and observations made during the conversation" },
 ];
 
 function HiringBriefReview({
@@ -679,6 +685,7 @@ function HiringBriefReview({
           const value = editing[field.key] as string;
           if (!value && field.key === "notableQuotes") return null;
           if (!value && field.key === "openFlags") return null;
+          if (!value && field.key === "recruiterNotes") return null;
           return (
             <div key={field.key}>
               {i > 0 && <div style={{ height: 1, background: "#F0F0EE" }} />}
@@ -1013,16 +1020,27 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
   function continueSession() {
     if (!savedMessages) return;
-    setMessages(savedMessages);
+    const msgs = savedMessages;
+    setMessages(msgs);
     setLatestAiIndex(-1);
     setSessionPhase("chat");
     setSavedMessages(null);
+    // Section 3 fix: reconstruct the hiring brief sidebar from the loaded
+    // conversation history so it doesn't reset to empty on resume.
+    fetchLiveSpec(msgs).then(extracted => {
+      if (Object.keys(extracted).length > 0) setLiveSpec(extracted);
+    }).catch(() => {});
   }
 
   function handleEmailLoad(msgs: Message[]) {
     setMessages(msgs);
     setLatestAiIndex(-1);
     setSessionPhase("chat");
+    // Section 3 fix: reconstruct the hiring brief sidebar from the loaded
+    // conversation history so it doesn't reset to empty on resume.
+    fetchLiveSpec(msgs).then(extracted => {
+      if (Object.keys(extracted).length > 0) setLiveSpec(extracted);
+    }).catch(() => {});
   }
 
   // Handle founder confirming the edited brief
@@ -1069,13 +1087,30 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       });
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
+        const errData = await res.json().catch(() => ({})) as { error?: string; message?: string; detail?: string };
+        // Section 4 fix: differentiate actual error causes rather than showing
+        // a generic "AI busy" message for all failures.
         if (res.status === 429) {
-          const errMsg = (errData as { message?: string }).message || "The AI is a bit busy right now. Try again in a moment.";
+          // Genuine Groq rate limit — the API server sets this specifically
+          const errMsg = errData.message || "The AI is a bit busy right now. Try again in a moment.";
           setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: errMsg }]; setLatestAiIndex(u.length - 1); return u; });
           return;
         }
-        throw new Error(`HTTP ${res.status}`);
+        if (res.status === 400) {
+          const errMsg = "The conversation couldn't be sent — it may be too long. Try starting a fresh conversation.";
+          setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: errMsg }]; setLatestAiIndex(u.length - 1); return u; });
+          return;
+        }
+        if (res.status === 500 && errData.error === "AI service not configured") {
+          setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: "The AI service isn't configured yet. Please try again later." }]; setLatestAiIndex(u.length - 1); return u; });
+          return;
+        }
+        if (res.status === 500 && errData.error === "Failed to get AI response") {
+          const detail = errData.detail ? ` (${errData.detail})` : "";
+          setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: `The AI ran into an error${detail}. Please try again in a moment.` }]; setLatestAiIndex(u.length - 1); return u; });
+          return;
+        }
+        throw new Error(`HTTP ${res.status}: ${errData.error ?? "Unknown error"}`);
       }
 
       const data = await res.json();
@@ -1120,7 +1155,12 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   }, [input, loading, messages, complete, sessionPhase, sessionId]);
 
   const handleInteractiveConfirm = useCallback((messageIndex: number, value: string) => {
-    setInteractiveUsed(prev => new Set([...prev, messageIndex]));
+    // Section 2 fix: flush the state update synchronously so the element
+    // is removed from the DOM before sendMessage runs and before any
+    // intermediate re-render can show it again.
+    flushSync(() => {
+      setInteractiveUsed(prev => new Set([...prev, messageIndex]));
+    });
     sendMessage(value);
   }, [sendMessage]);
 
@@ -1138,6 +1178,16 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const showNoConversation = sessionPhase === "chat" && messages.length === 0;
   const showRecovery = sessionPhase === "chat" && !recoveryBarHidden;
   const hasSidebarContent = Object.values(spec).some(v => v && (Array.isArray(v) ? v.length > 0 : true)) || hiringBrief !== null;
+
+  // Section 1 fix: when an interactive element is the pending answer for the last
+  // AI message, the element IS the answer — the text input should be blocked so
+  // users know they don't need to (and can't) type anything in addition.
+  const lastMsgIndex = messages.length - 1;
+  const lastMsg = messages.length > 0 ? messages[lastMsgIndex] : null;
+  const activeInteractiveType = lastMsg?.role === "assistant" ? detectInteractiveType(lastMsg.content) : null;
+  const hasActiveInteractive = activeInteractiveType !== null && !interactiveUsed.has(lastMsgIndex) && !loading && !complete;
+  const hasActiveContactForm = contactFormIndex !== null && contactFormIndex === lastMsgIndex && !interactiveUsed.has(contactFormIndex) && !loading && !complete;
+  const blockTextInput = hasActiveInteractive || hasActiveContactForm;
 
   return (
     <AnimatePresence>
@@ -1330,59 +1380,66 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
           {sessionPhase === "chat" && !complete && (
             <div className="flex-shrink-0" style={{ background: "rgba(250,250,248,0.97)", borderTop: "1px solid rgba(0,0,0,0.07)", backdropFilter: "blur(12px)" }}>
               <div className="max-w-[780px] mx-auto px-6 py-4">
-                <div className="flex items-end gap-3">
-                  {/* Section 4: larger font size */}
-                  <textarea
-                    ref={textareaRef}
-                    value={input}
-                    onChange={handleInput}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Reply..."
-                    rows={1}
-                    style={{
-                      flex: 1, border: "1.5px solid #E4E4E2", borderRadius: 14, padding: "16px 20px",
-                      fontFamily: "Inter, sans-serif", fontSize: 17, color: DARK,
-                      resize: "none", minHeight: 56, maxHeight: 150, overflowY: "auto",
-                      outline: "none", transition: "border-color 0.2s, box-shadow 0.2s", lineHeight: 1.55,
-                      background: "#FFFFFF", boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                    }}
-                    onFocus={e => { e.target.style.borderColor = ACCENT; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
-                    onBlur={e => { e.target.style.borderColor = "#E4E4E2"; e.target.style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)"; }}
-                  />
-                  {/* Section 5: microphone — direct handler, no useCallback */}
-                  <button
-                    onClick={handleMicClick}
-                    type="button"
-                    title={isListening ? "Stop listening" : "Voice input"}
-                    style={{
-                      width: 56, height: 56, borderRadius: 14, border: "none", flexShrink: 0,
-                      background: isListening ? "linear-gradient(135deg, #E05050, #FF7070)" : AI_BUBBLE_BG,
-                      cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s",
-                    }}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" stroke={isListening ? "white" : ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8" stroke={isListening ? "white" : ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
-                  {/* Send button */}
-                  <button
-                    onClick={() => sendMessage()}
-                    disabled={!input.trim() || loading}
-                    style={{
-                      width: 56, height: 56, borderRadius: 14, border: "none", flexShrink: 0,
-                      background: !input.trim() || loading ? "#E4E4E2" : `linear-gradient(135deg, ${ACCENT}, #2A9D5C)`,
-                      cursor: !input.trim() || loading ? "not-allowed" : "pointer",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      boxShadow: input.trim() && !loading ? "0 4px 14px rgba(26,122,74,0.3)" : "none",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z" stroke={!input.trim() || loading ? "#B0B0B0" : "white"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
-                </div>
+                {/* Section 1 fix: when an interactive element is waiting, show a hint
+                    instead of the text input so users know the element IS the answer */}
+                {blockTextInput ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 56, background: "rgba(26,122,74,0.04)", border: "1.5px dashed rgba(26,122,74,0.18)", borderRadius: 14, padding: "14px 20px" }}>
+                    <p style={{ fontFamily: "Inter, sans-serif", fontSize: 14, color: "#6B6B6B", textAlign: "center", margin: 0 }}>
+                      Use the selector above to answer, then click <strong style={{ color: ACCENT }}>Confirm</strong>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex items-end gap-3">
+                    <textarea
+                      ref={textareaRef}
+                      value={input}
+                      onChange={handleInput}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Reply..."
+                      rows={1}
+                      style={{
+                        flex: 1, border: "1.5px solid #E4E4E2", borderRadius: 14, padding: "16px 20px",
+                        fontFamily: "Inter, sans-serif", fontSize: 17, color: DARK,
+                        resize: "none", minHeight: 56, maxHeight: 150, overflowY: "auto",
+                        outline: "none", transition: "border-color 0.2s, box-shadow 0.2s", lineHeight: 1.55,
+                        background: "#FFFFFF", boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                      }}
+                      onFocus={e => { e.target.style.borderColor = ACCENT; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
+                      onBlur={e => { e.target.style.borderColor = "#E4E4E2"; e.target.style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)"; }}
+                    />
+                    <button
+                      onClick={handleMicClick}
+                      type="button"
+                      title={isListening ? "Stop listening" : "Voice input"}
+                      style={{
+                        width: 56, height: 56, borderRadius: 14, border: "none", flexShrink: 0,
+                        background: isListening ? "linear-gradient(135deg, #E05050, #FF7070)" : AI_BUBBLE_BG,
+                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s",
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" stroke={isListening ? "white" : ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8" stroke={isListening ? "white" : ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => sendMessage()}
+                      disabled={!input.trim() || loading}
+                      style={{
+                        width: 56, height: 56, borderRadius: 14, border: "none", flexShrink: 0,
+                        background: !input.trim() || loading ? "#E4E4E2" : `linear-gradient(135deg, ${ACCENT}, #2A9D5C)`,
+                        cursor: !input.trim() || loading ? "not-allowed" : "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        boxShadow: input.trim() && !loading ? "0 4px 14px rgba(26,122,74,0.3)" : "none",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z" stroke={!input.trim() || loading ? "#B0B0B0" : "white"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                )}
                 <p style={{ fontFamily: "Inter, sans-serif", fontSize: 11, color: "#B0B0B0", marginTop: 8, textAlign: "center" }}>
                   Bridgix hiring partner · Responses within seconds
                 </p>

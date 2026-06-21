@@ -137,7 +137,8 @@ TIMELINE: [urgency level, target start date if given, stated impact of delay if 
 BUDGET: [range given, equity and benefits if mentioned, flag if mismatched with the seniority requested]
 CONTACT: [full name, role at company, email, company website]
 NOTABLE QUOTES OR CONTEXT: [anything said in their own words that reveals something the structured fields above do not capture, tone, frustration, specific phrasing that has real signal a recruiter should read before sourcing]
-OPEN QUESTIONS OR FLAGS: [any contradictions, unclear points, or risks the Bridgix team should know before this goes to a recruiter]`;
+OPEN QUESTIONS OR FLAGS: [any contradictions, unclear points, or risks the Bridgix team should know before this goes to a recruiter]
+RECRUITER NOTES: [any reasonable assumptions or inferences you made during the conversation where the founder left a gap — for example, inferred seniority from context clues they gave, assumed remote because they never mentioned an office, flagged that the salary expectation looks low for the market given the stack they described. Only include what you explicitly stated or inferred during the conversation, not generic advice. If you made no notable inferences, write "None."]`;
 
 router.post("/chat", async (req, res) => {
   try {
@@ -195,12 +196,25 @@ router.post("/chat", async (req, res) => {
 
       reply = completion.choices[0]?.message?.content ?? "";
     } catch (groqErr: unknown) {
-      const err = groqErr as { status?: number; message?: string };
+      // Section 4 fix: log the full error details so the real cause is visible
+      // in server logs rather than being hidden behind a generic message.
+      const err = groqErr as { status?: number; message?: string; error?: { type?: string; code?: string; message?: string } };
+      req.log.error(
+        {
+          groqStatus: err?.status,
+          groqMessage: err?.message,
+          groqErrorType: err?.error?.type,
+          groqErrorCode: err?.error?.code,
+          groqErrorMessage: err?.error?.message,
+        },
+        "Groq API call failed"
+      );
       if (err?.status === 429) {
-        req.log.warn({ groqErr }, "Groq rate limit hit");
+        // True Groq rate limit — explicitly set by Groq, not a generic error
         res.status(429).json({
           error: "rate_limited",
           message: "The AI is a bit busy right now. Try again in a moment.",
+          detail: err?.message,
         });
         return;
       }
@@ -209,8 +223,11 @@ router.post("/chat", async (req, res) => {
         res.status(500).json({ error: "AI service authentication failed" });
         return;
       }
-      req.log.error({ groqErr }, "Groq API error");
-      res.status(500).json({ error: "Failed to get AI response" });
+      if (err?.status === 413 || (err?.error?.code === "context_length_exceeded")) {
+        res.status(400).json({ error: "Conversation too long", detail: "The conversation has exceeded the AI context limit." });
+        return;
+      }
+      res.status(500).json({ error: "Failed to get AI response", detail: err?.message });
       return;
     }
 
