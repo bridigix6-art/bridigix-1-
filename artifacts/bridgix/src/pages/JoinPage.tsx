@@ -509,137 +509,175 @@ export default function JoinPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen" style={{ background: "#FAFAF8" }}>
-        <Navigation />
-        <main className="pt-[80px]">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            style={{
-              background: "linear-gradient(160deg, #0D1412 0%, #0A0F0D 100%)",
-              minHeight: "calc(100dvh - 80px)",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "80px 24px",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg, transparent, #34D399, #1A7A4A, transparent)" }} />
+      <div
+        className="min-h-screen"
+        style={{
+          fontFamily: "'Inter', sans-serif",
+          backgroundImage: "url('/radar-bg.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center right",
+          backgroundRepeat: "no-repeat",
+          position: "relative",
+        }}
+      >
+        {/* White overlay to achieve white theme while showing the image */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(110deg, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.93) 45%, rgba(255,255,255,0.70) 70%, rgba(255,255,255,0.30) 100%)",
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        />
 
-            <div className="absolute inset-0 pointer-events-none" style={{
-              backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.015) 1px, transparent 0)",
-              backgroundSize: "28px 28px",
-            }} />
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <Navigation />
+        </div>
 
-            <div className="absolute pointer-events-none" style={{
-              top: "50%", left: "50%", transform: "translate(-50%, -60%)",
-              width: 700, height: 700,
-              background: "radial-gradient(circle, rgba(26,122,74,0.10) 0%, transparent 65%)",
-              filter: "blur(80px)",
-            }} />
-
-            <div className="relative z-10 flex flex-col items-center text-center" style={{ maxWidth: 580 }}>
+        <main
+          style={{
+            position: "relative",
+            zIndex: 1,
+            minHeight: "100dvh",
+            display: "flex",
+            alignItems: "center",
+            paddingTop: 80,
+            paddingLeft: 24,
+            paddingRight: 24,
+            paddingBottom: 80,
+          }}
+        >
+          <div style={{ maxWidth: 1100, width: "100%", margin: "0 auto" }}>
+            <motion.div
+              initial={{ opacity: 0, y: 28 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, ease: "easeOut" }}
+              style={{ maxWidth: 560 }}
+            >
+              {/* Label */}
               <motion.div
-                initial={{ scale: 0.7, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.1, type: "spring", stiffness: 220 }}
-                style={{
-                  width: 80, height: 80, borderRadius: 22,
-                  background: "rgba(26,122,74,0.15)", border: "1px solid rgba(52,211,153,0.25)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  marginBottom: 32, boxShadow: "0 8px 40px rgba(26,122,74,0.20)",
-                }}
-              >
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-                  <path d="M20 6L9 17L4 12" stroke="#34D399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </motion.div>
-
-              <motion.p
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.18 }}
-                style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, fontWeight: 500, color: "rgba(52,211,153,0.7)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: "#F0FBF5",
+                  border: "1px solid rgba(26,122,74,0.18)",
+                  borderRadius: 100,
+                  padding: "6px 14px",
+                  marginBottom: 32,
+                }}
               >
-                Application Received
-              </motion.p>
+                <span style={{
+                  width: 7, height: 7, borderRadius: "50%",
+                  background: "#1A7A4A",
+                  display: "inline-block",
+                  boxShadow: "0 0 0 3px rgba(26,122,74,0.15)",
+                }} />
+                <span style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "#1A7A4A",
+                  letterSpacing: "0.10em",
+                  textTransform: "uppercase",
+                }}>
+                  Application Received
+                </span>
+              </motion.div>
 
+              {/* Headline */}
               <motion.h1
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.22 }}
+                transition={{ duration: 0.5, delay: 0.16 }}
                 style={{
                   fontFamily: "'Inter', sans-serif",
                   fontWeight: 300,
-                  fontSize: "clamp(34px, 5vw, 54px)",
-                  color: "#FFFFFF",
-                  letterSpacing: "-0.04em",
-                  marginBottom: 18,
-                  lineHeight: 1.06,
+                  fontSize: "clamp(38px, 5.5vw, 62px)",
+                  color: "#0A0A0A",
+                  letterSpacing: "-0.045em",
+                  lineHeight: 1.05,
+                  marginBottom: 24,
                 }}
               >
                 You're on our radar.
               </motion.h1>
 
+              {/* Body */}
               <motion.p
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.30 }}
+                transition={{ duration: 0.5, delay: 0.24 }}
                 style={{
                   fontFamily: "'Inter', sans-serif",
-                  fontSize: 15,
-                  color: "rgba(255,255,255,0.45)",
+                  fontSize: 16,
+                  fontWeight: 400,
+                  color: "#4A4A4A",
                   lineHeight: 1.75,
-                  fontWeight: 300,
                   marginBottom: 44,
-                  maxWidth: 440,
+                  maxWidth: 460,
                 }}
               >
                 Every application is reviewed personally. If you're the kind of engineer we work with, you'll hear from us within 48 hours. Keep an eye on your inbox.
               </motion.p>
 
+              {/* Divider */}
               <motion.div
-                style={{ width: "100%", height: 1, background: "linear-gradient(90deg, transparent, rgba(52,211,153,0.4), rgba(26,122,74,0.35), transparent)", borderRadius: 1, marginBottom: 44 }}
-                initial={{ scaleX: 0 }}
+                initial={{ scaleX: 0, originX: 0 }}
                 animate={{ scaleX: 1 }}
-                transition={{ duration: 1.6, ease: "easeOut", delay: 0.45 }}
+                transition={{ duration: 1.2, ease: "easeOut", delay: 0.35 }}
+                style={{
+                  height: 1,
+                  background: "linear-gradient(90deg, #E0E0E0, transparent)",
+                  marginBottom: 40,
+                  maxWidth: 460,
+                }}
               />
 
+              {/* Actions */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.4, delay: 0.55 }}
-                className="flex flex-col sm:flex-row gap-3 items-center"
+                transition={{ duration: 0.4, delay: 0.45 }}
+                style={{ display: "flex", flexDirection: "column", gap: 16, alignItems: "flex-start" }}
               >
                 <button
                   type="button"
                   onClick={() => { window.location.href = import.meta.env.BASE_URL || "/"; }}
                   style={{
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    color: "rgba(255,255,255,0.65)",
-                    borderRadius: 12, padding: "12px 28px",
-                    fontFamily: "Inter, sans-serif", fontSize: 14, cursor: "pointer",
-                    transition: "all 0.2s",
+                    background: "#0A0A0A",
+                    border: "none",
+                    color: "#FFFFFF",
+                    borderRadius: 12,
+                    padding: "13px 28px",
+                    fontFamily: "'Inter', sans-serif",
+                    fontWeight: 500,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    transition: "background 0.2s",
+                    letterSpacing: "-0.01em",
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.10)"; e.currentTarget.style.color = "#FFFFFF"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(255,255,255,0.65)"; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#1A7A4A"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "#0A0A0A"; }}
                 >
                   ← Back to Bridigix
                 </button>
-                <span style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "rgba(255,255,255,0.25)" }}>
+                <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#9B9B9B" }}>
                   Questions?{" "}
-                  <a href="mailto:hareem@bridigix.org" style={{ color: "rgba(52,211,153,0.7)", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                  <a
+                    href="mailto:hareem@bridigix.org"
+                    style={{ color: "#1A7A4A", textDecoration: "underline", textUnderlineOffset: 3 }}
+                  >
                     hareem@bridigix.org
                   </a>
                 </span>
               </motion.div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </main>
       </div>
     );
