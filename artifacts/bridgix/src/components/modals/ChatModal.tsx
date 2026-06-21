@@ -269,6 +269,10 @@ function detectInteractiveType(message: string): InteractiveType {
   return null;
 }
 
+function stripContactFormSignal(text: string): string {
+  return text.replace(/render_component:\s*contact_info_form_bar\s*/gi, "").trim();
+}
+
 const TECH_TAGS = ["JavaScript", "TypeScript", "Python", "Go", "Rust", "Java", "Swift", "Kotlin", "React", "Next.js", "Vue", "Angular", "Node.js", "Express", "PostgreSQL", "MongoDB", "Redis", "MySQL", "AWS", "GCP", "Azure", "Docker", "Kubernetes"];
 const CONTRACT_OPTIONS = ["Full-time / Permanent", "Contract / Short-term", "Part-time", "Freelance", "Not sure yet"];
 
@@ -363,6 +367,126 @@ function ChoiceInput({ onConfirm }: { onConfirm: (value: string) => void }) {
       <button disabled={!selected} onClick={() => selected && onConfirm(`Contract type: ${selected}`)}
         style={{ width: "100%", background: selected ? DARK : "#E4E4E2", color: selected ? "white" : "#B0B0B0", border: "none", borderRadius: 10, padding: "11px", fontSize: 14, fontWeight: 500, cursor: selected ? "pointer" : "not-allowed", fontFamily: "Inter, sans-serif" }}>
         Confirm
+      </button>
+    </motion.div>
+  );
+}
+
+// ─── Contact info form bar ────────────────────────────────────────────────────
+
+function ContactFormBar({ onConfirm }: { onConfirm: (value: string) => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [website, setWebsite] = useState("");
+  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+
+  const handleSubmit = () => {
+    const e: { name?: string; email?: string } = {};
+    if (!name.trim()) e.name = "Required";
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) e.email = "Valid email required";
+    if (Object.keys(e).length) { setErrors(e); return; }
+    const parts = [`Name: ${name.trim()}`, `Email: ${email.trim()}`];
+    if (website.trim()) parts.push(`Company website: ${website.trim()}`);
+    onConfirm(parts.join(", "));
+  };
+
+  const fieldStyle = (hasError?: boolean): React.CSSProperties => ({
+    width: "100%",
+    border: `1px solid ${hasError ? "#E05050" : "#E0E0DE"}`,
+    borderRadius: 8,
+    padding: "9px 12px",
+    fontSize: 14,
+    fontFamily: "Inter, sans-serif",
+    outline: "none",
+    background: "white",
+    boxSizing: "border-box",
+    transition: "border-color 0.2s",
+  });
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{
+        background: "rgba(26,122,74,0.05)",
+        border: "1px solid rgba(26,122,74,0.16)",
+        borderRadius: 18,
+        padding: "22px 24px",
+        maxWidth: 480,
+        fontFamily: "Inter, sans-serif",
+      }}
+    >
+      <p style={{ fontSize: 13, color: "#6B6B6B", marginBottom: 18, fontWeight: 500 }}>
+        Fill in your details to complete the intake
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div>
+          <label style={{ fontSize: 12, fontWeight: 600, color: "#4A4A4A", display: "block", marginBottom: 5 }}>
+            Full Name <span style={{ color: ACCENT }}>*</span>
+          </label>
+          <input
+            value={name}
+            onChange={e => { setName(e.target.value); setErrors(prev => ({ ...prev, name: undefined })); }}
+            onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }}
+            placeholder="Jane Smith"
+            style={fieldStyle(!!errors.name)}
+            onFocus={e => { e.target.style.borderColor = ACCENT; }}
+            onBlur={e => { e.target.style.borderColor = errors.name ? "#E05050" : "#E0E0DE"; }}
+          />
+          {errors.name && <span style={{ fontSize: 11, color: "#E05050", marginTop: 3, display: "block" }}>{errors.name}</span>}
+        </div>
+        <div>
+          <label style={{ fontSize: 12, fontWeight: 600, color: "#4A4A4A", display: "block", marginBottom: 5 }}>
+            Work Email <span style={{ color: ACCENT }}>*</span>
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={e => { setEmail(e.target.value); setErrors(prev => ({ ...prev, email: undefined })); }}
+            onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }}
+            placeholder="jane@company.com"
+            style={fieldStyle(!!errors.email)}
+            onFocus={e => { e.target.style.borderColor = ACCENT; }}
+            onBlur={e => { e.target.style.borderColor = errors.email ? "#E05050" : "#E0E0DE"; }}
+          />
+          {errors.email && <span style={{ fontSize: 11, color: "#E05050", marginTop: 3, display: "block" }}>{errors.email}</span>}
+        </div>
+        <div>
+          <label style={{ fontSize: 12, fontWeight: 600, color: "#4A4A4A", display: "block", marginBottom: 5 }}>
+            Company Website <span style={{ color: "#B0B0B0", fontWeight: 400 }}>(optional)</span>
+          </label>
+          <input
+            value={website}
+            onChange={e => setWebsite(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }}
+            placeholder="company.com"
+            style={fieldStyle()}
+            onFocus={e => { e.target.style.borderColor = ACCENT; }}
+            onBlur={e => { e.target.style.borderColor = "#E0E0DE"; }}
+          />
+        </div>
+      </div>
+      <button
+        onClick={handleSubmit}
+        style={{
+          width: "100%",
+          marginTop: 18,
+          background: DARK,
+          color: "white",
+          border: "none",
+          borderRadius: 10,
+          padding: "12px",
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: "pointer",
+          fontFamily: "Inter, sans-serif",
+          transition: "background 0.2s",
+          letterSpacing: "-0.01em",
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = ACCENT; }}
+        onMouseLeave={e => { e.currentTarget.style.background = DARK; }}
+      >
+        Submit details →
       </button>
     </motion.div>
   );
@@ -561,7 +685,7 @@ function AIBubble({ content, isLatest }: { content: string; isLatest: boolean })
         style={{ background: AI_BUBBLE_BG, border: `1px solid ${AI_BUBBLE_BORDER}` }}>
         <img src={logoImage} alt="Bridgix" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
       </div>
-      <div style={{ background: AI_BUBBLE_BG, border: `1px solid ${AI_BUBBLE_BORDER}`, borderRadius: "6px 18px 18px 18px", padding: "14px 20px", fontSize: 16, color: DARK, lineHeight: 1.65, fontFamily: "Inter, sans-serif", fontWeight: 400, maxWidth: "78%" }}>
+      <div style={{ background: AI_BUBBLE_BG, border: `1px solid ${AI_BUBBLE_BORDER}`, borderRadius: "6px 18px 18px 18px", padding: "14px 20px", fontSize: 16, color: DARK, lineHeight: 1.65, fontFamily: "Inter, sans-serif", fontWeight: 500, maxWidth: "78%" }}>
         {isLatest ? text : content}
       </div>
     </div>
@@ -572,7 +696,7 @@ function AIBubble({ content, isLatest }: { content: string; isLatest: boolean })
 function UserBubble({ content }: { content: string }) {
   return (
     <div className="flex items-end justify-end gap-3">
-      <div style={{ background: USER_BUBBLE_BG, border: `1px solid ${USER_BUBBLE_BORDER}`, borderRadius: "18px 6px 18px 18px", padding: "14px 20px", fontSize: 16, color: DARK, lineHeight: 1.65, fontFamily: "Inter, sans-serif", fontWeight: 400, maxWidth: "72%" }}>
+      <div style={{ background: USER_BUBBLE_BG, border: `1px solid ${USER_BUBBLE_BORDER}`, borderRadius: "18px 6px 18px 18px", padding: "14px 20px", fontSize: 16, color: DARK, lineHeight: 1.65, fontFamily: "Inter, sans-serif", fontWeight: 500, maxWidth: "72%" }}>
         {content}
       </div>
     </div>
@@ -829,6 +953,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const [isListening, setIsListening] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
   const [interactiveUsed, setInteractiveUsed] = useState<Set<number>>(new Set());
+  const [contactFormIndex, setContactFormIndex] = useState<number | null>(null);
   const [hiringBrief, setHiringBrief] = useState<HiringBrief | null>(null);
   const [reviewSaving, setReviewSaving] = useState(false);
   // Session ID — stable per modal session, prevents duplicate DB rows
@@ -899,6 +1024,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       setSavedMessages(null);
       setInput("");
       setInteractiveUsed(new Set());
+      setContactFormIndex(null);
       setHiringBrief(null);
       setReviewSaving(false);
       return;
@@ -958,6 +1084,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
     setDetectedEmail(null);
     setRecoveryBarHidden(false);
     setInteractiveUsed(new Set());
+    setContactFormIndex(null);
     setHiringBrief(null);
     setSessionPhase("chat");
     setTimeout(() => {
@@ -978,7 +1105,6 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
     setMessages(msgs);
     setLatestAiIndex(-1);
     setSessionPhase("chat");
-    setRecoveryBarHidden(true);
   }
 
   // Handle founder confirming the edited brief
@@ -1048,6 +1174,15 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
           setHiringBrief(parsed);
           setSessionPhase("review");
         }, 2200);
+      } else if (reply.includes("render_component: contact_info_form_bar")) {
+        // Clean signal from displayed text, store cleaned version in messages
+        const cleanedReply = stripContactFormSignal(reply);
+        setMessages(prev => {
+          const u = [...prev, { role: "assistant" as const, content: cleanedReply }];
+          setLatestAiIndex(u.length - 1);
+          setContactFormIndex(u.length - 1);
+          return u;
+        });
       } else {
         setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: reply }]; setLatestAiIndex(u.length - 1); return u; });
       }
@@ -1230,10 +1365,16 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
                         const interactiveType = detectInteractiveType(msg.content);
                         const isLastAI = i === messages.length - 1 || (i === messages.length - 2 && messages[messages.length - 1]?.role === "assistant");
                         const shouldShowInteractive = interactiveType && isLastAI && !interactiveUsed.has(i) && !loading && !complete;
+                        const shouldShowContactForm = i === contactFormIndex && !interactiveUsed.has(i) && !loading && !complete;
                         return (
                           <div key={i}>
                             <AIBubble content={msg.content} isLatest={i === latestAiIndex} />
-                            {shouldShowInteractive && (
+                            {shouldShowContactForm && (
+                              <div style={{ marginTop: 12, marginLeft: 44 }}>
+                                <ContactFormBar onConfirm={(val) => handleInteractiveConfirm(i, val)} />
+                              </div>
+                            )}
+                            {shouldShowInteractive && !shouldShowContactForm && (
                               <div style={{ marginTop: 12, marginLeft: 44 }}>
                                 {interactiveType === "slider" && <SliderInput onConfirm={(val) => handleInteractiveConfirm(i, val)} />}
                                 {interactiveType === "tags" && <TagsInput onConfirm={(val) => handleInteractiveConfirm(i, val)} />}
