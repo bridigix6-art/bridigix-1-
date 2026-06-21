@@ -51,63 +51,38 @@ Market reality: high-demand specializations like ML, backend infrastructure, and
 
 ---
 
-REQUIRED FIELDS
+CLOSING GATE — REQUIRED FIELDS
 
-YOU MUST NOT CLOSE THE CONVERSATION OR TRIGGER THE CONTACT FORM UNTIL EVERY FIELD BELOW HAS BEEN EXPLICITLY COLLECTED. This is the single most important rule in this prompt. Track which fields are still missing as you go. If the conversation seems to be wrapping up with any field still empty, ask for it before moving to the close. Never assume a field is covered unless the founder explicitly addressed it.
+You may only output "render_component: contact_info_form_bar" after confirming every one of the following 20 fields is answered. Before writing each response, evaluate every field as YES or NO based strictly on what the founder has explicitly said. A conversation that "feels complete" is not complete. A conversation with 4, 5, or even 10 answered questions is not complete. Only all 20 fields confirmed YES allows the close.
 
-COMPANY CONTEXT
-- What the company builds and what problem it solves
-- Company stage: pre-seed, seed, Series A or beyond (infer if not stated, confirm if unclear)
-- Team size or headcount, current and roughly where it is heading
+[1]  What the company builds and what specific problem it solves
+[2]  Company stage: pre-seed, seed, Series A, or beyond (infer if not stated, confirm if unclear)
+[3]  Current team size or headcount
+[4]  Actual job title — a real title, not a description of the company or product
+[5]  Concrete day-to-day responsibilities: what this person does in week one and month one specifically
+[6]  New role, growth headcount, or replacement — and if replacement, what happened with the previous person
+[7]  Minimum years of experience required and the specific reason that bar exists for this role
+[8]  Reporting structure: who they report to by name and title; whether they will manage anyone
+[9]  Core tech stack: specific languages, frameworks, and tools, not a vague category like "modern stack"
+[10] Must-have technical skills — asked as an explicit, distinct question, separate from everything else
+[11] Nice-to-have technical skills — asked as a separate, distinct question from must-haves
+[12] Remote, hybrid, or in-office — with location or timezone requirements if applicable
+[13] Working style: structured versus adaptive culture — asked as a specific question
+[14] Must-have culture fit and soft skills — asked as an explicit, distinct question
+[15] Nice-to-have culture fit factors — asked as a separate, distinct question from must-haves
+[16] Red flags and disqualifiers: what would rule a candidate out immediately, for both technical and interpersonal reasons
+[17] Prior hiring history: tried before yes or no, and what happened if yes (one follow-up only)
+[18] Engagement type: full-time, part-time, or contractor
+[19] Target start date or urgency level, and what is actually at stake if the role stays open longer
+[20] Budget or salary range (including equity or benefits if mentioned)
 
-THE ROLE
-- Actual job title (not a description of the company, a real job title)
-- Day-to-day responsibilities in concrete terms: what does this person do in week one, month one, not just a category like "build features"
-- Whether this is a new role, growth headcount, or a replacement; if replacement, what happened with the previous person (one follow-up only, then move on)
-
-EXPERIENCE AND REPORTING
-- Minimum years of experience required and the reason that bar exists for this role
-- Reporting structure: who this person reports to by name and title if possible, whether they will manage anyone, and what the immediate team around them looks like
-- Seniority level defined by what they will actually own and decide, not just a title label
-
-TECHNICAL REQUIREMENTS
-- Core tech stack: specific languages, frameworks, and tools required, not a vague category
-- Must-have technical skills, asked as an explicit distinct question
-- Nice-to-have technical skills, asked as a separate distinct question from must-haves (do not assume these from one answer)
-
-WORK ENVIRONMENT
-- Remote, hybrid, or in-office; if hybrid or in-office, location and timezone requirements; if remote, any async versus sync expectations
-- Working style: structured versus adaptive team culture, asked as a specific question
-
-CULTURE AND PEOPLE FIT
-- Must-have culture fit and soft skills, asked as an explicit distinct question
-- Nice-to-have culture fit factors, asked as a separate distinct question
-- Red flags and disqualifiers: what would immediately rule out a candidate regardless of technical ability, probed for both technical and interpersonal deal-breakers
-
-PRIOR HIRING HISTORY
-- Whether they have hired for this type of role before at this or any previous company
-- If yes, what happened: technical fit issue, communication, work style mismatch, or something else (one follow-up only)
-- If they list more than three or four absolute non-negotiables across technical or culture, ask once what they would flex on for the right person
-
-ENGAGEMENT AND TIMELINE
-- Engagement type: full-time, part-time, or contractor
-- Expected duration if contract or project-based
-- Target start date or urgency level, and what is actually at stake if the role stays open longer
-
-COMPENSATION
-- Budget or salary range
-- Equity, benefits, visa sponsorship, or other relevant compensation elements
-- If the budget seems clearly mismatched with the seniority or scope described, name it once plainly and ask about flexibility
-
-CONTACT INFORMATION
-When every field above has been collected, trigger the contact form by outputting the following signal on its own line at the very start of your response, before any other text. Do not output this signal until every field above is genuinely complete:
-render_component: contact_info_form_bar
-Then in that same response, ask naturally for their full name, role at the company, email address, and company website in one sentence.
-
----
+Hard rules for the contact form trigger:
+- If ANY of the 20 fields above is still NO, you must not output "render_component: contact_info_form_bar". Ask for the next uncollected field instead.
+- If ALL 20 fields are YES, output "render_component: contact_info_form_bar" on its own line at the very start of your response, before any other text. Then in that same response, ask naturally for their full name, role at the company, email address, and company website in one sentence.
+- Treat fields [10] and [11] as two separate questions that must each be asked individually. Treat fields [14] and [15] as two separate questions that must each be asked individually. Getting one does not fill the other.
 
 CONVERSATION FLOW
-Move through the required fields above in a natural order, generally company context first and contact last, but you are not required to follow a rigid sequence as long as every field is collected before closing. If the founder volunteers information out of order, accept it and do not re-ask for something already covered. Before triggering the contact form, do a complete mental check of every required field above. If anything is missing, ask for it, even if the conversation otherwise feels complete.
+Move through the 20 required fields above in a natural conversational order, generally starting with company context and ending with contact. If the founder volunteers information out of order, accept it and mark that field YES without re-asking. Apply the one-follow-up-per-topic rule throughout. Before writing each response, identify which fields are still NO and ensure your next question addresses one of them.
 
 ---
 
@@ -274,6 +249,100 @@ router.post("/chat", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Unexpected chat error");
     res.status(500).json({ error: "Something went wrong. Please try again." });
+  }
+});
+
+const EXTRACT_SPEC_PROMPT = `You are a structured data extractor. Extract information that has been explicitly stated by the FOUNDER (not the hiring partner) in the conversation below. Output ONLY valid JSON with no other text before or after it. If a field has not been clearly and explicitly established by the founder, set it to null. Never infer, guess, or fill in from context.
+
+Return exactly this JSON structure with no deviations:
+{
+  "company": "1-sentence description of what the company builds and what problem it solves, or null",
+  "role": "the actual job title and concrete day-to-day responsibilities as the founder described them, or null",
+  "seniority": "experience level and what this person will own or decide, in the founder's own words, or null",
+  "techStack": ["specific technology names mentioned by the founder"] or null,
+  "contractType": "full-time or part-time or contractor, exactly as stated, or null",
+  "workStyle": "remote or hybrid or in-office, with any location or timezone details the founder mentioned, or null",
+  "timeline": "target start date or urgency in the founder's own words, or null",
+  "budget": "salary range or budget figure stated by the founder, or null",
+  "contact": "email address if provided, or null"
+}`;
+
+router.post("/extract-spec", async (req, res) => {
+  try {
+    const { messages } = req.body as { messages?: unknown };
+
+    if (!Array.isArray(messages) || messages.length === 0) {
+      res.json({ spec: {} });
+      return;
+    }
+
+    const validMessages = messages.every(
+      (m) =>
+        m &&
+        typeof m === "object" &&
+        typeof (m as { role?: unknown }).role === "string" &&
+        typeof (m as { content?: unknown }).content === "string" &&
+        ["user", "assistant"].includes((m as { role: string }).role)
+    );
+
+    if (!validMessages) {
+      res.json({ spec: {} });
+      return;
+    }
+
+    const apiKey = process.env["GROQ_API_KEY"];
+    if (!apiKey) {
+      res.json({ spec: {} });
+      return;
+    }
+
+    const groq = new Groq({ apiKey });
+    const typedMessages = messages as Array<{ role: string; content: string }>;
+
+    const conversationText = typedMessages
+      .map((m) => `${m.role === "user" ? "FOUNDER" : "HIRING PARTNER"}: ${m.content}`)
+      .join("\n\n");
+
+    let raw = "";
+    try {
+      const completion = await groq.chat.completions.create({
+        model: "llama-3.1-8b-instant",
+        messages: [
+          { role: "system", content: EXTRACT_SPEC_PROMPT },
+          { role: "user", content: `CONVERSATION:\n${conversationText}` },
+        ],
+        max_tokens: 450,
+        temperature: 0.05,
+      });
+      raw = completion.choices[0]?.message?.content ?? "{}";
+    } catch {
+      res.json({ spec: {} });
+      return;
+    }
+
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    const jsonStr = jsonMatch ? jsonMatch[0] : "{}";
+
+    let spec: Record<string, unknown> = {};
+    try {
+      spec = JSON.parse(jsonStr) as Record<string, unknown>;
+    } catch {
+      spec = {};
+    }
+
+    // Sanitize: remove null values so the frontend doesn't display them
+    const cleaned: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(spec)) {
+      if (v !== null && v !== undefined && v !== "") {
+        if (Array.isArray(v) && v.length === 0) continue;
+        cleaned[k] = v;
+      }
+    }
+
+    res.json({ spec: cleaned });
+  } catch (err) {
+    req.log.error({ err }, "Unexpected extract-spec error");
+    res.json({ spec: {} });
   }
 });
 

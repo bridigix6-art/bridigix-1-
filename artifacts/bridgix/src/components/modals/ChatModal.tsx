@@ -145,112 +145,19 @@ function parseIntakeComplete(text: string): HiringBrief {
 
 // ─── Incremental spec extraction (during conversation) ───────────────────────
 
-function extractSpec(messages: Message[]): CandidateSpec {
-  const spec: CandidateSpec = {};
-  const fullText = messages.map(m => m.content).join("\n");
-  const userMessages = messages.filter(m => m.role === "user").map(m => m.content.toLowerCase());
-
-  const companyMatch = fullText.match(/COMPANY CONTEXT:\s*([^\n]+)/);
-  if (companyMatch) spec.company = companyMatch[1].trim();
-
-  const roleMatch = fullText.match(/^ROLE:\s*([^\n]+)/m);
-  if (roleMatch) spec.role = roleMatch[1].trim();
-
-  const seniorityMatch = fullText.match(/SENIORITY[^:]*:\s*([^\n]+)/i);
-  if (seniorityMatch) spec.seniority = seniorityMatch[1].trim();
-
-  const contractMatch = fullText.match(/CONTRACT[^:]*:\s*([^\n]+)/i);
-  if (contractMatch) spec.contractType = contractMatch[1].trim();
-
-  const workStyleMatch = fullText.match(/WORK STYLE[^:]*:\s*([^\n]+)/i);
-  if (workStyleMatch) spec.workStyle = workStyleMatch[1].trim();
-
-  const timelineMatch = fullText.match(/TIMELINE:\s*([^\n]+)/);
-  if (timelineMatch) spec.timeline = timelineMatch[1].trim();
-
-  const budgetMatch = fullText.match(/BUDGET:\s*([^\n]+)/);
-  if (budgetMatch) spec.budget = budgetMatch[1].trim();
-
-  const contactMatch = fullText.match(/CONTACT:\s*([^\n]+)/);
-  if (contactMatch) spec.contact = contactMatch[1].trim();
-
-  if (!spec.company) {
-    for (const msg of messages.filter(m => m.role === "user").slice(0, 3)) {
-      if (msg.content.length > 15 && msg.content.length < 300) {
-        spec.company = msg.content.length > 100 ? msg.content.slice(0, 97) + "..." : msg.content;
-        break;
-      }
-    }
+async function fetchLiveSpec(messages: Message[]): Promise<CandidateSpec> {
+  try {
+    const res = await fetch("/api/extract-spec", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages }),
+    });
+    if (!res.ok) return {};
+    const data = await res.json() as { spec?: CandidateSpec };
+    return data.spec ?? {};
+  } catch {
+    return {};
   }
-
-  if (!spec.role) {
-    const roleKeywords = ["engineer", "developer", "designer", "manager", "lead", "cto", "backend", "frontend", "fullstack", "full stack", "ml ", "ai ", "devops", "mobile"];
-    for (const msg of userMessages) {
-      const found = roleKeywords.find(k => msg.includes(k));
-      if (found) {
-        spec.role = msg.split(/\s+/).slice(0, 12).join(" ");
-        break;
-      }
-    }
-  }
-
-  if (!spec.seniority) {
-    const kwds = ["junior", "mid", "senior", "staff", "lead", "principal"];
-    for (const msg of userMessages) {
-      const found = kwds.find(k => msg.includes(k));
-      if (found) { spec.seniority = found.charAt(0).toUpperCase() + found.slice(1); break; }
-    }
-  }
-
-  if (!spec.techStack) {
-    const stackKws = ["react", "typescript", "javascript", "python", "go", "node", "next", "vue", "angular", "swift", "kotlin", "rust", "java", "postgres", "mongodb", "aws", "gcp", "azure", "docker", "kubernetes"];
-    const found: string[] = [];
-    for (const msg of userMessages) {
-      for (const k of stackKws) {
-        if (msg.includes(k) && !found.includes(k)) found.push(k.charAt(0).toUpperCase() + k.slice(1));
-      }
-    }
-    if (found.length) spec.techStack = found.slice(0, 6);
-  }
-
-  if (!spec.contractType) {
-    const kwds: [string, string][] = [["contractor", "Contractor"], ["contract", "Contractor"], ["freelance", "Freelance"], ["full-time", "Full-time"], ["full time", "Full-time"], ["part-time", "Part-time"]];
-    for (const msg of userMessages) {
-      const found = kwds.find(([k]) => msg.includes(k));
-      if (found) { spec.contractType = found[1]; break; }
-    }
-  }
-
-  if (!spec.workStyle) {
-    const kwds: [string, string][] = [["async", "Async / Remote"], ["remote", "Remote"], ["structured", "Structured"], ["adaptive", "Adaptive"], ["fast", "Fast-paced"]];
-    for (const msg of userMessages) {
-      const found = kwds.find(([k]) => msg.includes(k));
-      if (found) { spec.workStyle = found[1]; break; }
-    }
-  }
-
-  if (!spec.timeline) {
-    const kwds = ["urgent", "asap", "immediately", "next month", "few weeks", "3 months", "6 months", "q1", "q2", "q3", "q4"];
-    for (const msg of userMessages) {
-      const found = kwds.find(k => msg.includes(k));
-      if (found) { spec.timeline = msg.slice(0, 70); break; }
-    }
-  }
-
-  if (!spec.budget) {
-    const re = /(\$[\d,]+k?|\£[\d,]+k?|[\d]+k\s*(usd|gbp|eur)?(\s*[-–]\s*[\d]+k)?|[\d]+,[\d]+)/i;
-    for (const msg of userMessages) {
-      const m = msg.match(re);
-      if (m) { spec.budget = m[0]; break; }
-    }
-  }
-
-  if (!spec.contact) {
-    const emailMatch2 = fullText.match(EMAIL_REGEX);
-    if (emailMatch2) spec.contact = emailMatch2[0];
-  }
-
-  return spec;
 }
 
 // ─── Interactive type detection ──────────────────────────────────────────────
@@ -963,6 +870,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const [contactFormIndex, setContactFormIndex] = useState<number | null>(null);
   const [hiringBrief, setHiringBrief] = useState<HiringBrief | null>(null);
   const [reviewSaving, setReviewSaving] = useState(false);
+  const [liveSpec, setLiveSpec] = useState<CandidateSpec>({});
   // Session ID — stable per modal session, prevents duplicate DB rows
   const [sessionId] = useState(() => crypto.randomUUID());
 
@@ -971,7 +879,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const spec = extractSpec(messages);
+  const spec = liveSpec;
 
   // Section 5: microphone — no useCallback, synchronous recognition.start()
   function handleMicClick() {
@@ -1035,6 +943,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       setHiringBrief(null);
       setReviewSaving(false);
       setShowSidebar(true);
+      setLiveSpec({});
       return;
     }
     // Track visitor session on modal open
@@ -1094,6 +1003,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
     setInteractiveUsed(new Set());
     setContactFormIndex(null);
     setHiringBrief(null);
+    setLiveSpec({});
     setSessionPhase("chat");
     setTimeout(() => {
       setMessages([{ role: "assistant", content: pickFirstMessage() }]);
@@ -1170,6 +1080,14 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
       const data = await res.json();
       const reply: string = data.reply ?? "";
+
+      // Fire-and-forget: extract structured spec from the updated conversation
+      if (reply && !reply.includes("INTAKE_COMPLETE")) {
+        const fullConv = [...newMessages, { role: "assistant" as const, content: reply }];
+        fetchLiveSpec(fullConv).then(extracted => {
+          if (Object.keys(extracted).length > 0) setLiveSpec(extracted);
+        }).catch(() => {});
+      }
 
       if (reply.includes("INTAKE_COMPLETE")) {
         // Add final AI message to the conversation
