@@ -685,7 +685,7 @@ function AIBubble({ content, isLatest }: { content: string; isLatest: boolean })
         style={{ background: AI_BUBBLE_BG, border: `1px solid ${AI_BUBBLE_BORDER}` }}>
         <img src={logoImage} alt="Bridgix" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
       </div>
-      <div style={{ background: AI_BUBBLE_BG, border: `1px solid ${AI_BUBBLE_BORDER}`, borderRadius: "6px 18px 18px 18px", padding: "14px 20px", fontSize: 16, color: DARK, lineHeight: 1.65, fontFamily: "Inter, sans-serif", fontWeight: 500, maxWidth: "78%" }}>
+      <div style={{ background: AI_BUBBLE_BG, border: `1px solid ${AI_BUBBLE_BORDER}`, borderRadius: "6px 18px 18px 18px", padding: "14px 20px", fontSize: 17, color: DARK, lineHeight: 1.65, fontFamily: "Inter, sans-serif", fontWeight: 500, maxWidth: "78%" }}>
         {isLatest ? text : content}
       </div>
     </div>
@@ -696,7 +696,7 @@ function AIBubble({ content, isLatest }: { content: string; isLatest: boolean })
 function UserBubble({ content }: { content: string }) {
   return (
     <div className="flex items-end justify-end gap-3">
-      <div style={{ background: USER_BUBBLE_BG, border: `1px solid ${USER_BUBBLE_BORDER}`, borderRadius: "18px 6px 18px 18px", padding: "14px 20px", fontSize: 16, color: DARK, lineHeight: 1.65, fontFamily: "Inter, sans-serif", fontWeight: 500, maxWidth: "72%" }}>
+      <div style={{ background: USER_BUBBLE_BG, border: `1px solid ${USER_BUBBLE_BORDER}`, borderRadius: "18px 6px 18px 18px", padding: "14px 20px", fontSize: 17, color: DARK, lineHeight: 1.65, fontFamily: "Inter, sans-serif", fontWeight: 500, maxWidth: "72%" }}>
         {content}
       </div>
     </div>
@@ -875,8 +875,7 @@ function CompletionPanel() {
 
 function RecoveryBar({ onLoad, hidden }: { onLoad: (msgs: Message[]) => void; hidden: boolean }) {
   const [email, setEmail] = useState("");
-  const [state, setState] = useState<"idle" | "loading" | "not_found" | "error">("idle");
-  const [toast, setToast] = useState(false);
+  const [state, setState] = useState<"idle" | "loading" | "not_found" | "error" | "already_complete">("idle");
 
   if (hidden) return null;
 
@@ -886,52 +885,60 @@ function RecoveryBar({ onLoad, hidden }: { onLoad: (msgs: Message[]) => void; hi
     setState("loading");
     try {
       const res = await fetch(`/api/load-chat?email=${encodeURIComponent(trimmed)}`);
-      const data = await res.json() as { found?: boolean; messages?: Message[] };
+      const data = await res.json() as { found?: boolean; messages?: Message[]; intakeSummary?: string };
       if (data.found && data.messages && data.messages.length > 0) {
+        if (data.intakeSummary) {
+          // Conversation is already complete — do not load as resumable
+          setState("already_complete");
+          return;
+        }
         onLoad(data.messages);
-        setToast(true);
-        setTimeout(() => setToast(false), 2500);
+        setState("idle");
       } else {
         setState("not_found");
-        setTimeout(() => setState("idle"), 2500);
+        setTimeout(() => setState("idle"), 3000);
       }
     } catch {
       setState("error");
-      setTimeout(() => setState("idle"), 2200);
+      setTimeout(() => setState("idle"), 2500);
     }
   };
 
   return (
-    <div style={{ background: "#F7F7F5", borderBottom: "1px solid #F0F0EE", padding: "10px 0", marginBottom: 8, borderRadius: 12 }}>
-      <div className="flex items-center gap-2.5 flex-wrap">
-        <span style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "#6B6B6B", fontWeight: 400, whiteSpace: "nowrap" }}>
-          Resume a completed intake?
-        </span>
-        <input
-          type="email"
-          value={email}
-          onChange={e => { setEmail(e.target.value); if (state !== "idle") setState("idle"); }}
-          placeholder="your@email.com"
-          style={{ border: `1px solid ${state === "not_found" ? "#ef4444" : "#E8E8E8"}`, borderRadius: 6, padding: "5px 11px", fontSize: 12, fontFamily: "Inter, sans-serif", width: 200, outline: "none", background: "white" }}
-          onKeyDown={e => { if (e.key === "Enter") handleLoad(); }}
-        />
-        <button
-          onClick={handleLoad}
-          disabled={state === "loading"}
-          style={{ background: DARK, color: "#FFFFFF", borderRadius: 6, padding: "5px 14px", fontSize: 12, fontFamily: "Inter, sans-serif", fontWeight: 500, cursor: "pointer", border: "none" }}
-          onMouseEnter={e => { e.currentTarget.style.background = ACCENT; }}
-          onMouseLeave={e => { e.currentTarget.style.background = DARK; }}
-        >
-          {state === "loading" ? "Loading..." : "Load"}
-        </button>
-        {state === "not_found" && <span style={{ fontFamily: "Inter, sans-serif", fontSize: 11, color: "#ef4444" }}>No completed intake found.</span>}
-        {state === "error" && <span style={{ fontFamily: "Inter, sans-serif", fontSize: 11, color: "#ef4444" }}>Error loading. Try again.</span>}
-      </div>
-      {toast && (
-        <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ width: 7, height: 7, borderRadius: "50%", background: ACCENT }} />
-          <span style={{ fontFamily: "Inter, sans-serif", fontSize: 12, color: ACCENT }}>Intake restored.</span>
-        </motion.div>
+    <div style={{ background: "#F7F7F5", border: "1px solid #F0F0EE", padding: "12px 16px", marginBottom: 8, borderRadius: 12, fontFamily: "Inter, sans-serif" }}>
+      {state === "already_complete" ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: ACCENT, flexShrink: 0 }} />
+          <div>
+            <p style={{ fontSize: 13, color: DARK, fontWeight: 500, margin: 0 }}>Intake already completed</p>
+            <p style={{ fontSize: 12, color: "#6B6B6B", margin: "2px 0 0" }}>This intake is done — the Bridgix team already has your brief. <button onClick={() => setState("idle")} style={{ color: ACCENT, background: "none", border: "none", cursor: "pointer", fontSize: 12, padding: 0, fontFamily: "Inter, sans-serif" }}>Search again</button></p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <span style={{ fontSize: 13, color: "#6B6B6B", fontWeight: 400, whiteSpace: "nowrap" }}>
+            Resume a previous intake?
+          </span>
+          <input
+            type="email"
+            value={email}
+            onChange={e => { setEmail(e.target.value); if (state !== "idle") setState("idle"); }}
+            placeholder="your@email.com"
+            style={{ border: `1px solid ${state === "not_found" ? "#ef4444" : "#E8E8E8"}`, borderRadius: 6, padding: "5px 11px", fontSize: 12, fontFamily: "Inter, sans-serif", width: 200, outline: "none", background: "white" }}
+            onKeyDown={e => { if (e.key === "Enter") handleLoad(); }}
+          />
+          <button
+            onClick={handleLoad}
+            disabled={state === "loading"}
+            style={{ background: DARK, color: "#FFFFFF", borderRadius: 6, padding: "5px 14px", fontSize: 12, fontFamily: "Inter, sans-serif", fontWeight: 500, cursor: "pointer", border: "none" }}
+            onMouseEnter={e => { e.currentTarget.style.background = ACCENT; }}
+            onMouseLeave={e => { e.currentTarget.style.background = DARK; }}
+          >
+            {state === "loading" ? "Looking..." : "Load"}
+          </button>
+          {state === "not_found" && <span style={{ fontSize: 11, color: "#ef4444" }}>No in-progress intake found for that email.</span>}
+          {state === "error" && <span style={{ fontSize: 11, color: "#ef4444" }}>Error loading. Try again.</span>}
+        </div>
       )}
     </div>
   );
@@ -1027,6 +1034,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       setContactFormIndex(null);
       setHiringBrief(null);
       setReviewSaving(false);
+      setShowSidebar(true);
       return;
     }
     // Track visitor session on modal open
@@ -1363,8 +1371,8 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
                     {messages.map((msg, i) => {
                       if (msg.role === "assistant") {
                         const interactiveType = detectInteractiveType(msg.content);
-                        const isLastAI = i === messages.length - 1 || (i === messages.length - 2 && messages[messages.length - 1]?.role === "assistant");
-                        const shouldShowInteractive = interactiveType && isLastAI && !interactiveUsed.has(i) && !loading && !complete;
+                        const isLastMsg = i === messages.length - 1;
+                        const shouldShowInteractive = interactiveType && isLastMsg && !interactiveUsed.has(i) && !loading && !complete;
                         const shouldShowContactForm = i === contactFormIndex && !interactiveUsed.has(i) && !loading && !complete;
                         return (
                           <div key={i}>
