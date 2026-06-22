@@ -9,15 +9,27 @@ interface ChatModalProps { open: boolean; onClose: () => void; }
 
 interface HiringBrief {
   companyContext: string;
+  hiringMotivation: string;
   role: string;
   seniorityOwnership: string;
-  pastHiringSignal: string;
+  reportingStructure: string;
+  successMetrics: string;
+  mustHaves: string;
+  niceToHaves: string;
+  dealBreakers: string;
+  technicalRequirements: string;
   workStyleCulture: string;
-  requirements: string;
+  compensationModel: string;
+  interviewProcess: string;
+  decisionChain: string;
+  candidatePitch: string;
+  recruitingStrategy: string;
+  riskRegister: string;
+  assumptionLog: string;
+  pastHiringSignal: string;
   timeline: string;
   budget: string;
   contact: string;
-  notableQuotes: string;
   openFlags: string;
   rawIntake?: string;
 }
@@ -106,15 +118,27 @@ function getTimeGreeting(): string {
 function parseIntakeComplete(text: string): HiringBrief {
   const FIELDS = [
     "COMPANY CONTEXT",
+    "HIRING MOTIVATION",
     "ROLE",
     "SENIORITY & OWNERSHIP",
-    "PAST HIRING SIGNAL",
+    "REPORTING STRUCTURE",
+    "SUCCESS METRICS",
+    "CANDIDATE PROFILE — MUST-HAVES",
+    "CANDIDATE PROFILE — NICE-TO-HAVES",
+    "DEAL BREAKERS",
+    "TECHNICAL REQUIREMENTS",
     "WORK STYLE & CULTURE",
-    "REQUIREMENTS",
+    "COMPENSATION MODEL",
+    "INTERVIEW PROCESS",
+    "DECISION CHAIN",
+    "CANDIDATE PITCH",
+    "RECRUITING STRATEGY",
+    "RISK REGISTER",
+    "ASSUMPTION LOG",
+    "PAST HIRING SIGNAL",
     "TIMELINE",
     "BUDGET",
     "CONTACT",
-    "NOTABLE QUOTES OR CONTEXT",
     "OPEN QUESTIONS OR FLAGS",
   ];
 
@@ -128,17 +152,29 @@ function parseIntakeComplete(text: string): HiringBrief {
   };
 
   return {
-    companyContext: extractField(FIELDS[0], FIELDS[1]),
-    role: extractField(FIELDS[1], FIELDS[2]),
-    seniorityOwnership: extractField(FIELDS[2], FIELDS[3]),
-    pastHiringSignal: extractField(FIELDS[3], FIELDS[4]),
-    workStyleCulture: extractField(FIELDS[4], FIELDS[5]),
-    requirements: extractField(FIELDS[5], FIELDS[6]),
-    timeline: extractField(FIELDS[6], FIELDS[7]),
-    budget: extractField(FIELDS[7], FIELDS[8]),
-    contact: extractField(FIELDS[8], FIELDS[9]),
-    notableQuotes: extractField(FIELDS[9], FIELDS[10]),
-    openFlags: extractField(FIELDS[10]),
+    companyContext:       extractField(FIELDS[0],  FIELDS[1]),
+    hiringMotivation:    extractField(FIELDS[1],  FIELDS[2]),
+    role:                extractField(FIELDS[2],  FIELDS[3]),
+    seniorityOwnership:  extractField(FIELDS[3],  FIELDS[4]),
+    reportingStructure:  extractField(FIELDS[4],  FIELDS[5]),
+    successMetrics:      extractField(FIELDS[5],  FIELDS[6]),
+    mustHaves:           extractField(FIELDS[6],  FIELDS[7]),
+    niceToHaves:         extractField(FIELDS[7],  FIELDS[8]),
+    dealBreakers:        extractField(FIELDS[8],  FIELDS[9]),
+    technicalRequirements: extractField(FIELDS[9], FIELDS[10]),
+    workStyleCulture:    extractField(FIELDS[10], FIELDS[11]),
+    compensationModel:   extractField(FIELDS[11], FIELDS[12]),
+    interviewProcess:    extractField(FIELDS[12], FIELDS[13]),
+    decisionChain:       extractField(FIELDS[13], FIELDS[14]),
+    candidatePitch:      extractField(FIELDS[14], FIELDS[15]),
+    recruitingStrategy:  extractField(FIELDS[15], FIELDS[16]),
+    riskRegister:        extractField(FIELDS[16], FIELDS[17]),
+    assumptionLog:       extractField(FIELDS[17], FIELDS[18]),
+    pastHiringSignal:    extractField(FIELDS[18], FIELDS[19]),
+    timeline:            extractField(FIELDS[19], FIELDS[20]),
+    budget:              extractField(FIELDS[20], FIELDS[21]),
+    contact:             extractField(FIELDS[21], FIELDS[22]),
+    openFlags:           extractField(FIELDS[22]),
     rawIntake: text,
   };
 }
@@ -406,16 +442,28 @@ interface BriefField { label: string; value: string | string[] | undefined; }
 function buildSidebarFields(brief: HiringBrief | null, spec: CandidateSpec): BriefField[] {
   if (brief) {
     return [
-      { label: "Company Context", value: brief.companyContext },
-      { label: "The Role", value: brief.role },
+      { label: "Company Context",       value: brief.companyContext },
+      { label: "Hiring Motivation",     value: brief.hiringMotivation },
+      { label: "The Role",              value: brief.role },
       { label: "Seniority & Ownership", value: brief.seniorityOwnership },
-      { label: "Work Style", value: brief.workStyleCulture },
-      { label: "Requirements", value: brief.requirements },
-      { label: "Past Hiring Signal", value: brief.pastHiringSignal },
-      { label: "Timeline", value: brief.timeline },
-      { label: "Budget", value: brief.budget },
-      { label: "Contact", value: brief.contact },
-      { label: "Open Flags", value: brief.openFlags },
+      { label: "Reporting Structure",   value: brief.reportingStructure },
+      { label: "Success Metrics",       value: brief.successMetrics },
+      { label: "Must-Haves",            value: brief.mustHaves },
+      { label: "Nice-to-Haves",         value: brief.niceToHaves },
+      { label: "Deal Breakers",         value: brief.dealBreakers },
+      { label: "Technical Requirements", value: brief.technicalRequirements },
+      { label: "Work Style & Culture",  value: brief.workStyleCulture },
+      { label: "Compensation",          value: brief.compensationModel },
+      { label: "Interview Process",     value: brief.interviewProcess },
+      { label: "Decision Chain",        value: brief.decisionChain },
+      { label: "Candidate Pitch",       value: brief.candidatePitch },
+      { label: "Risk Register",         value: brief.riskRegister },
+      { label: "Assumption Log",        value: brief.assumptionLog },
+      { label: "Past Hiring Signal",    value: brief.pastHiringSignal },
+      { label: "Timeline",              value: brief.timeline },
+      { label: "Budget",                value: brief.budget },
+      { label: "Contact",               value: brief.contact },
+      { label: "Open Flags",            value: brief.openFlags },
     ].filter(f => f.value && String(f.value).trim().length > 0);
   }
   return [
@@ -613,17 +661,29 @@ function UserBubble({ content }: { content: string }) {
 // ─── Doc 2: Editable Hiring Brief Review screen ───────────────────────────────
 
 const BRIEF_REVIEW_FIELDS: { key: keyof HiringBrief; label: string; hint: string }[] = [
-  { key: "companyContext", label: "Company Context", hint: "Stage, team size, what you build and the problem you solve" },
-  { key: "role", label: "The Role", hint: "Title, responsibilities, new or replacement, codebase context" },
-  { key: "seniorityOwnership", label: "Seniority & Ownership", hint: "Level, what they'll own, autonomy and independence expected" },
-  { key: "requirements", label: "Requirements", hint: "Must-haves, nice-to-haves, what you'd flex on" },
-  { key: "workStyleCulture", label: "Work Style & Culture", hint: "Team dynamic, working environment, tools" },
-  { key: "pastHiringSignal", label: "Past Hiring Signal", hint: "Prior experience with this type of hire, what went wrong if anything" },
-  { key: "timeline", label: "Timeline", hint: "Urgency and what's at stake if this stays open" },
-  { key: "budget", label: "Budget", hint: "Salary range or rate, equity, any mismatch flags" },
-  { key: "contact", label: "Contact", hint: "Name and email for sending profiles" },
-  { key: "notableQuotes", label: "Notable Context", hint: "Anything said that reveals signal not in the structured fields" },
-  { key: "openFlags", label: "Open Flags", hint: "Contradictions, unclear points, or risks the team should know" },
+  { key: "companyContext",       label: "Company Context",          hint: "Stage, team size, product description, the problem it solves" },
+  { key: "hiringMotivation",     label: "Hiring Motivation",        hint: "Why this role exists right now — the business urgency or catalyst" },
+  { key: "role",                 label: "The Role",                 hint: "Title, responsibilities, new or replacement, week one and month one" },
+  { key: "seniorityOwnership",   label: "Seniority & Ownership",    hint: "Experience required, what they own, autonomy, whether they manage anyone" },
+  { key: "reportingStructure",   label: "Reporting Structure",      hint: "Who they report to, team size and shape, management expectations" },
+  { key: "successMetrics",       label: "Success Metrics",          hint: "30-day, 60-day, 90-day, and 1-year outcomes for this hire" },
+  { key: "mustHaves",            label: "Must-Haves",               hint: "Non-negotiable technical and human requirements" },
+  { key: "niceToHaves",          label: "Nice-to-Haves",            hint: "Desired but non-blocking attributes" },
+  { key: "dealBreakers",         label: "Deal Breakers",            hint: "What would immediately disqualify a candidate" },
+  { key: "technicalRequirements", label: "Technical Requirements",  hint: "Must-have tech skills, nice-to-have tech skills, stack specifics" },
+  { key: "workStyleCulture",     label: "Work Style & Culture",     hint: "Remote/hybrid/in-office, timezone, async vs sync, team dynamic" },
+  { key: "compensationModel",    label: "Compensation Model",       hint: "Salary range, equity, benefits, visa sponsorship" },
+  { key: "interviewProcess",     label: "Interview Process",        hint: "Rounds, who conducts each stage, evaluation criteria, decision maker" },
+  { key: "decisionChain",        label: "Decision Chain",           hint: "Who makes the final call, other stakeholders, timeline from offer to decision" },
+  { key: "candidatePitch",       label: "Candidate Pitch",          hint: "Why a strong engineer should choose this role over competing options" },
+  { key: "recruitingStrategy",   label: "Recruiting Strategy",      hint: "Target profile, sourcing channels, referral opportunities, constraints" },
+  { key: "riskRegister",         label: "Risk Register",            hint: "Known risks: budget mismatch, timeline pressure, unclear scope" },
+  { key: "assumptionLog",        label: "Assumption Log",           hint: "What was inferred vs explicitly stated, with recruiting implications" },
+  { key: "pastHiringSignal",     label: "Past Hiring Signal",       hint: "Prior experience with this hire, what went wrong, founder concerns" },
+  { key: "timeline",             label: "Timeline",                 hint: "Urgency level, target start date, consequence of delay" },
+  { key: "budget",               label: "Budget",                   hint: "Salary range, equity, any mismatch flag with seniority" },
+  { key: "contact",              label: "Contact",                  hint: "Name, role, email, company website" },
+  { key: "openFlags",            label: "Open Flags",               hint: "Unresolved items, contradictions, risks before sourcing begins" },
 ];
 
 function HiringBriefReview({
@@ -677,7 +737,6 @@ function HiringBriefReview({
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
         {BRIEF_REVIEW_FIELDS.map((field, i) => {
           const value = editing[field.key] as string;
-          if (!value && field.key === "notableQuotes") return null;
           if (!value && field.key === "openFlags") return null;
           return (
             <div key={field.key}>
