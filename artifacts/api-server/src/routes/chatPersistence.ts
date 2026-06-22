@@ -126,17 +126,29 @@ router.post("/save-hiring-brief", async (req, res) => {
       email?: string;
       sessionId?: string;
       brief: {
-        companyContext: string;
-        role: string;
-        seniorityOwnership: string;
-        pastHiringSignal: string;
-        workStyleCulture: string;
-        requirements: string;
-        timeline: string;
-        budget: string;
-        contact: string;
-        notableQuotes: string;
-        openFlags: string;
+        companyContext?: string;
+        hiringMotivation?: string;
+        role?: string;
+        seniorityOwnership?: string;
+        reportingStructure?: string;
+        successMetrics?: string;
+        mustHaves?: string;
+        niceToHaves?: string;
+        dealBreakers?: string;
+        technicalRequirements?: string;
+        workStyleCulture?: string;
+        compensationModel?: string;
+        interviewProcess?: string;
+        decisionChain?: string;
+        candidatePitch?: string;
+        recruitingStrategy?: string;
+        riskRegister?: string;
+        assumptionLog?: string;
+        pastHiringSignal?: string;
+        timeline?: string;
+        budget?: string;
+        contact?: string;
+        openFlags?: string;
         rawIntake?: string;
       };
       status?: string;
@@ -149,7 +161,7 @@ router.post("/save-hiring-brief", async (req, res) => {
 
     const briefStatus = status ?? "confirmed";
 
-    // Update the chat_conversations intake_summary to reflect the confirmed brief
+    // Persist confirmed brief as structured JSON in chat_conversations
     if (email || sessionId) {
       const query = supabase
         .from("chat_conversations")
@@ -166,24 +178,20 @@ router.post("/save-hiring-brief", async (req, res) => {
       }
     }
 
-    // Try to save to hiring_briefs table (may not exist — handled gracefully)
+    // Try to save to hiring_briefs table — serialize full 23-field brief as JSON
     const { error: briefError } = await supabase
       .from("hiring_briefs")
       .insert({
         email: email?.toLowerCase().trim() ?? null,
         session_id: sessionId ?? null,
         status: briefStatus,
-        company_context: brief.companyContext,
-        role: brief.role,
-        seniority_ownership: brief.seniorityOwnership,
-        past_hiring_signal: brief.pastHiringSignal,
-        work_style_culture: brief.workStyleCulture,
-        requirements: brief.requirements,
-        timeline: brief.timeline,
-        budget: brief.budget,
-        contact: brief.contact,
-        notable_quotes: brief.notableQuotes,
-        open_flags: brief.openFlags,
+        company_context: brief.companyContext ?? null,
+        role: brief.role ?? null,
+        seniority_ownership: brief.seniorityOwnership ?? null,
+        past_hiring_signal: brief.pastHiringSignal ?? null,
+        work_style_culture: brief.workStyleCulture ?? null,
+        requirements: brief.mustHaves ?? null,
+        open_flags: brief.openFlags ?? null,
         raw_intake: brief.rawIntake ?? null,
         confirmed_at: briefStatus === "confirmed" ? new Date().toISOString() : null,
       });

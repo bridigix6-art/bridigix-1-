@@ -696,9 +696,40 @@ function HiringBriefReview({
   saving: boolean;
 }) {
   const [editing, setEditing] = useState<HiringBrief>({ ...brief });
+  const [downloading, setDownloading] = useState(false);
 
   const update = (key: keyof HiringBrief, value: string) => {
     setEditing(prev => ({ ...prev, [key]: value }));
+  };
+
+  const downloadPdf = async () => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      const res = await fetch("/api/generate-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brief: editing }),
+      });
+      if (!res.ok) {
+        const err = await res.json() as { message?: string };
+        alert(err.message ?? "Could not generate PDF. Check that all required fields are filled.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "hiring-brief.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Failed to download PDF. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -777,9 +808,9 @@ function HiringBriefReview({
         })}
       </div>
 
-      {/* Confirm button */}
+      {/* Confirm + Download buttons */}
       <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid #F0F0EE" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <button
             onClick={() => onConfirm(editing)}
             disabled={saving}
@@ -796,10 +827,27 @@ function HiringBriefReview({
           >
             {saving ? "Sending..." : "Looks good, send to the team →"}
           </button>
-          <p style={{ fontSize: 12, color: "#B0B0B0" }}>
-            Profiles in your inbox within 5-7 days.
-          </p>
+          <button
+            onClick={downloadPdf}
+            disabled={downloading}
+            style={{
+              background: "white", color: DARK, border: `1.5px solid #E8E8E8`,
+              borderRadius: 12, padding: "14px 24px", fontSize: 14, fontWeight: 500,
+              cursor: downloading ? "wait" : "pointer", fontFamily: "Inter, sans-serif",
+              display: "flex", alignItems: "center", gap: 7, transition: "all 0.2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.color = ACCENT; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#E8E8E8"; e.currentTarget.style.color = DARK; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            {downloading ? "Generating..." : "Download PDF"}
+          </button>
         </div>
+        <p style={{ fontSize: 12, color: "#B0B0B0", marginTop: 10 }}>
+          Profiles in your inbox within 5-7 days.
+        </p>
       </div>
     </motion.div>
   );
