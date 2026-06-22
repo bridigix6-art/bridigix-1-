@@ -14,13 +14,19 @@ interface HiringBrief {
   companyContext: string;
   role: string;
   seniorityOwnership: string;
-  pastHiringSignal: string;
-  workStyleCulture: string;
+  reportingStructure: string;
+  candidateProfile: string;
   requirements: string;
+  workStyleCulture: string;
+  compensation: string;
   timeline: string;
-  budget: string;
+  interviewProcess: string;
+  dealBreakers: string;
+  sellPoints: string;
+  pastHiringSignal: string;
+  successMetrics: string;
+  validatedAssumptions: string;
   contact: string;
-  notableQuotes: string;
   openFlags: string;
   recruiterNotes: string;
   rawIntake?: string;
@@ -110,16 +116,22 @@ function getTimeGreeting(): string {
 function parseIntakeComplete(text: string): HiringBrief {
   const FIELDS = [
     "COMPANY CONTEXT",
-    "ROLE",
+    "THE ROLE",
     "SENIORITY & OWNERSHIP",
-    "PAST HIRING SIGNAL",
-    "WORK STYLE & CULTURE",
+    "REPORTING STRUCTURE",
+    "CANDIDATE PROFILE",
     "REQUIREMENTS",
+    "WORK STYLE & CULTURE",
+    "COMPENSATION",
     "TIMELINE",
-    "BUDGET",
+    "INTERVIEW PROCESS",
+    "DEAL BREAKERS",
+    "SELL POINTS",
+    "PAST HIRING SIGNAL",
+    "SUCCESS METRICS",
+    "VALIDATED ASSUMPTIONS",
     "CONTACT",
-    "NOTABLE QUOTES OR CONTEXT",
-    "OPEN QUESTIONS OR FLAGS",
+    "OPEN FLAGS",
     "RECRUITER NOTES",
   ];
 
@@ -136,15 +148,21 @@ function parseIntakeComplete(text: string): HiringBrief {
     companyContext: extractField(FIELDS[0], FIELDS[1]),
     role: extractField(FIELDS[1], FIELDS[2]),
     seniorityOwnership: extractField(FIELDS[2], FIELDS[3]),
-    pastHiringSignal: extractField(FIELDS[3], FIELDS[4]),
-    workStyleCulture: extractField(FIELDS[4], FIELDS[5]),
+    reportingStructure: extractField(FIELDS[3], FIELDS[4]),
+    candidateProfile: extractField(FIELDS[4], FIELDS[5]),
     requirements: extractField(FIELDS[5], FIELDS[6]),
-    timeline: extractField(FIELDS[6], FIELDS[7]),
-    budget: extractField(FIELDS[7], FIELDS[8]),
-    contact: extractField(FIELDS[8], FIELDS[9]),
-    notableQuotes: extractField(FIELDS[9], FIELDS[10]),
-    openFlags: extractField(FIELDS[10], FIELDS[11]),
-    recruiterNotes: extractField(FIELDS[11]),
+    workStyleCulture: extractField(FIELDS[6], FIELDS[7]),
+    compensation: extractField(FIELDS[7], FIELDS[8]),
+    timeline: extractField(FIELDS[8], FIELDS[9]),
+    interviewProcess: extractField(FIELDS[9], FIELDS[10]),
+    dealBreakers: extractField(FIELDS[10], FIELDS[11]),
+    sellPoints: extractField(FIELDS[11], FIELDS[12]),
+    pastHiringSignal: extractField(FIELDS[12], FIELDS[13]),
+    successMetrics: extractField(FIELDS[13], FIELDS[14]),
+    validatedAssumptions: extractField(FIELDS[14], FIELDS[15]),
+    contact: extractField(FIELDS[15], FIELDS[16]),
+    openFlags: extractField(FIELDS[16], FIELDS[17]),
+    recruiterNotes: extractField(FIELDS[17]),
     rawIntake: text,
   };
 }
@@ -415,14 +433,18 @@ function buildSidebarFields(brief: HiringBrief | null, spec: CandidateSpec): Bri
       { label: "Company Context", value: brief.companyContext },
       { label: "The Role", value: brief.role },
       { label: "Seniority & Ownership", value: brief.seniorityOwnership },
-      { label: "Work Style", value: brief.workStyleCulture },
+      { label: "Candidate Profile", value: brief.candidateProfile },
       { label: "Requirements", value: brief.requirements },
-      { label: "Past Hiring Signal", value: brief.pastHiringSignal },
+      { label: "Work Style & Culture", value: brief.workStyleCulture },
+      { label: "Compensation", value: brief.compensation },
       { label: "Timeline", value: brief.timeline },
-      { label: "Budget", value: brief.budget },
+      { label: "Interview Process", value: brief.interviewProcess },
+      { label: "Deal Breakers", value: brief.dealBreakers },
+      { label: "Sell Points", value: brief.sellPoints },
+      { label: "Success Metrics", value: brief.successMetrics },
+      { label: "Validated Assumptions", value: brief.validatedAssumptions },
       { label: "Contact", value: brief.contact },
       { label: "Open Flags", value: brief.openFlags },
-      { label: "Recruiter Notes", value: brief.recruiterNotes },
     ].filter(f => f.value && String(f.value).trim().length > 0);
   }
   return [
@@ -619,29 +641,37 @@ function UserBubble({ content }: { content: string }) {
 
 // ─── Doc 2: Editable Hiring Brief Review screen ───────────────────────────────
 
-const BRIEF_REVIEW_FIELDS: { key: keyof HiringBrief; label: string; hint: string }[] = [
-  { key: "companyContext", label: "Company Context", hint: "Stage, team size, what you build and the problem you solve" },
-  { key: "role", label: "The Role", hint: "Title, responsibilities, new or replacement, codebase context" },
-  { key: "seniorityOwnership", label: "Seniority & Ownership", hint: "Level, what they'll own, autonomy and independence expected" },
-  { key: "requirements", label: "Requirements", hint: "Must-haves, nice-to-haves, what you'd flex on" },
-  { key: "workStyleCulture", label: "Work Style & Culture", hint: "Team dynamic, working environment, tools" },
-  { key: "pastHiringSignal", label: "Past Hiring Signal", hint: "Prior experience with this type of hire, what went wrong if anything" },
-  { key: "timeline", label: "Timeline", hint: "Urgency and what's at stake if this stays open" },
-  { key: "budget", label: "Budget", hint: "Salary range or rate, equity, any mismatch flags" },
-  { key: "contact", label: "Contact", hint: "Name and email for sending profiles" },
-  { key: "notableQuotes", label: "Notable Context", hint: "Anything said that reveals signal not in the structured fields" },
-  { key: "openFlags", label: "Open Flags", hint: "Contradictions, unclear points, or risks the team should know" },
-  { key: "recruiterNotes", label: "Recruiter Notes", hint: "Assumptions, inferences, and observations made during the conversation" },
+const BRIEF_REVIEW_FIELDS: { key: keyof HiringBrief; label: string; hint: string; optional?: boolean }[] = [
+  { key: "companyContext", label: "Company Context", hint: "Stage, team size, what the company builds and the problem it solves" },
+  { key: "role", label: "The Role", hint: "Title, day-to-day responsibilities, new role or replacement context, week-one priorities" },
+  { key: "seniorityOwnership", label: "Seniority & Ownership", hint: "Minimum experience and why, what they own, autonomy expected, any direct reports" },
+  { key: "reportingStructure", label: "Reporting Structure", hint: "Who they report to by name and title, immediate peers, team shape" },
+  { key: "candidateProfile", label: "Ideal Candidate Profile", hint: "Career archetype, background, mindset, and operating style that fits this role" },
+  { key: "requirements", label: "Requirements", hint: "Must-have technical, nice-to-have technical, must-have culture fit, nice-to-have culture factors" },
+  { key: "workStyleCulture", label: "Work Style & Culture", hint: "Environment, pace, communication style, remote/hybrid/in-office with specifics" },
+  { key: "compensation", label: "Compensation", hint: "Salary range, equity, benefits, any market-rate notes" },
+  { key: "timeline", label: "Timeline", hint: "Target start date, urgency level, business impact of delay" },
+  { key: "interviewProcess", label: "Interview Process", hint: "Number of rounds, who evaluates what, how the final decision is made" },
+  { key: "dealBreakers", label: "Deal Breakers", hint: "Hard disqualifiers — technical and behavioral — that cause immediate rejection" },
+  { key: "sellPoints", label: "Sell Points", hint: "Why a strong, in-demand candidate should want this role over competing options" },
+  { key: "pastHiringSignal", label: "Past Hiring Signal", hint: "Prior attempts, what failed, founder concerns that shape candidate evaluation" },
+  { key: "successMetrics", label: "Success Metrics", hint: "What the new hire needs to achieve at 30, 60, and 90 days" },
+  { key: "validatedAssumptions", label: "Validated Assumptions", hint: "Inferred recruiter intelligence — observations, evidence, implications, success/failure patterns" },
+  { key: "contact", label: "Contact", hint: "Name, title, email, company, website" },
+  { key: "openFlags", label: "Open Flags", hint: "Contradictions, unresolved risks, areas needing additional diligence", optional: true },
+  { key: "recruiterNotes", label: "Recruiter Notes", hint: "Strategic sourcing notes, where to find candidates, how to pitch the role", optional: true },
 ];
 
 function HiringBriefReview({
   brief,
   onConfirm,
   saving,
+  exportError,
 }: {
   brief: HiringBrief;
   onConfirm: (edited: HiringBrief) => void;
   saving: boolean;
+  exportError?: string | null;
 }) {
   const [editing, setEditing] = useState<HiringBrief>({ ...brief });
 
@@ -685,9 +715,7 @@ function HiringBriefReview({
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
         {BRIEF_REVIEW_FIELDS.map((field, i) => {
           const value = editing[field.key] as string;
-          if (!value && field.key === "notableQuotes") return null;
-          if (!value && field.key === "openFlags") return null;
-          if (!value && field.key === "recruiterNotes") return null;
+          if (!value && field.optional) return null;
           return (
             <div key={field.key}>
               {i > 0 && <div style={{ height: 1, background: "#F0F0EE" }} />}
@@ -701,7 +729,7 @@ function HiringBriefReview({
                 <textarea
                   value={value}
                   onChange={e => update(field.key, e.target.value)}
-                  rows={value && value.length > 120 ? 4 : 2}
+                  rows={value && value.length > 400 ? 8 : value && value.length > 120 ? 4 : 2}
                   placeholder={`Edit ${field.label.toLowerCase()}...`}
                   style={{
                     width: "100%",
@@ -729,6 +757,11 @@ function HiringBriefReview({
 
       {/* Confirm button */}
       <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid #F0F0EE" }}>
+        {exportError && (
+          <div style={{ marginBottom: 16, padding: "12px 16px", background: "rgba(224,80,80,0.06)", border: "1px solid rgba(224,80,80,0.2)", borderRadius: 10, fontFamily: "Inter, sans-serif" }}>
+            <p style={{ fontSize: 13, color: "#C04040", margin: 0, lineHeight: 1.5 }}>{exportError}</p>
+          </div>
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
           <button
             onClick={() => onConfirm(editing)}
@@ -744,7 +777,7 @@ function HiringBriefReview({
             onMouseEnter={e => { if (!saving) { e.currentTarget.style.boxShadow = "0 6px 28px rgba(26,122,74,0.45)"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
             onMouseLeave={e => { e.currentTarget.style.boxShadow = saving ? "none" : "0 4px 20px rgba(26,122,74,0.30)"; e.currentTarget.style.transform = "none"; }}
           >
-            {saving ? "Sending..." : "Looks good, send to the team →"}
+            {saving ? "Generating brief..." : "Looks good, send to the team →"}
           </button>
           <p style={{ fontSize: 12, color: "#B0B0B0" }}>
             Profiles in your inbox within 5-7 days.
@@ -879,6 +912,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const [contactFormIndex, setContactFormIndex] = useState<number | null>(null);
   const [hiringBrief, setHiringBrief] = useState<HiringBrief | null>(null);
   const [reviewSaving, setReviewSaving] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [liveSpec, setLiveSpec] = useState<CandidateSpec>({});
   // Session ID — stable per modal session, prevents duplicate DB rows
   const [sessionId] = useState(() => crypto.randomUUID());
@@ -954,6 +988,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       setContactFormIndex(null);
       setHiringBrief(null);
       setReviewSaving(false);
+      setExportError(null);
       setShowSidebar(true);
       setLiveSpec({});
       return;
@@ -1060,14 +1095,21 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
         allowTaint: false,
         logging: false,
       });
+
+      // Validate canvas has real content (not a blank/empty capture)
+      if (canvas.width < 100 || canvas.height < 100) return null;
       const dataUrl = canvas.toDataURL("image/png");
+      // A PNG with real content should be at least 3KB of base64
+      if (dataUrl.length < 3000) return null;
+
       const res = await fetch("/api/upload-artifact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, type: "screenshot", dataUrl }),
       });
       if (!res.ok) return null;
-      const data = await res.json() as { ok?: boolean; url?: string };
+      const data = await res.json() as { ok?: boolean; url?: string; error?: string };
+      if (!data.ok) return null;
       return data.url ?? null;
     } catch {
       return null;
@@ -1075,99 +1117,138 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   }
 
   // ─── Generate hiring brief PDF and upload to Supabase Storage ────────────────
-  async function generateAndUploadPdf(brief: HiringBrief): Promise<string | null> {
+  async function generateAndUploadPdf(brief: HiringBrief): Promise<{ url: string | null; error?: string }> {
     try {
       const doc = new jsPDF({ unit: "mm", format: "a4" });
       const pageW = 210;
       const margin = 18;
       const contentW = pageW - margin * 2;
-      let y = 20;
+      let y = 22;
 
-      // Title
+      // ── Cover header ──────────────────────────────────────────────────────────
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
+      doc.setFontSize(22);
       doc.setTextColor(26, 122, 74);
       doc.text("Hiring Brief", margin, y);
-      y += 8;
+      y += 7;
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.setTextColor(120, 120, 120);
-      doc.text(`Confirmed via Bridgix · ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}`, margin, y);
-      if (detectedEmail) {
-        doc.text(`Client: ${detectedEmail}`, margin + contentW - doc.getTextWidth(`Client: ${detectedEmail}`), y);
+      const dateStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
+      doc.text(`Bridgix Executive Search  ·  Prepared ${dateStr}`, margin, y);
+      if (brief.contact) {
+        const emailMatch = brief.contact.match(/Email:\s*([^\n]+)/i);
+        if (emailMatch) {
+          const emailStr = `Client: ${emailMatch[1].trim()}`;
+          doc.text(emailStr, margin + contentW - doc.getTextWidth(emailStr), y);
+        }
       }
-      y += 6;
+      y += 5;
 
-      // Divider
-      doc.setDrawColor(220, 220, 220);
-      doc.setLineWidth(0.3);
+      doc.setDrawColor(26, 122, 74);
+      doc.setLineWidth(0.5);
       doc.line(margin, y, pageW - margin, y);
       y += 8;
 
-      const FIELDS: Array<[string, keyof HiringBrief]> = [
+      const PDF_FIELDS: Array<[string, keyof HiringBrief]> = [
         ["Company Context", "companyContext"],
-        ["Role", "role"],
+        ["The Role", "role"],
         ["Seniority & Ownership", "seniorityOwnership"],
-        ["Past Hiring Signal", "pastHiringSignal"],
-        ["Work Style & Culture", "workStyleCulture"],
+        ["Reporting Structure", "reportingStructure"],
+        ["Ideal Candidate Profile", "candidateProfile"],
         ["Requirements", "requirements"],
+        ["Work Style & Culture", "workStyleCulture"],
+        ["Compensation", "compensation"],
         ["Timeline", "timeline"],
-        ["Budget", "budget"],
+        ["Interview Process", "interviewProcess"],
+        ["Deal Breakers", "dealBreakers"],
+        ["Sell Points", "sellPoints"],
+        ["Past Hiring Signal", "pastHiringSignal"],
+        ["Success Metrics", "successMetrics"],
+        ["Validated Assumptions", "validatedAssumptions"],
         ["Contact", "contact"],
-        ["Notable Quotes or Context", "notableQuotes"],
-        ["Open Questions or Flags", "openFlags"],
+        ["Open Flags", "openFlags"],
         ["Recruiter Notes", "recruiterNotes"],
       ];
 
-      for (const [label, key] of FIELDS) {
-        const val = brief[key];
-        if (!val || val === "N/A" || val.trim() === "") continue;
+      let sectionsWritten = 0;
 
-        // Check if we need a new page
-        if (y > 265) {
-          doc.addPage();
-          y = 20;
-        }
+      for (const [label, key] of PDF_FIELDS) {
+        const val = (brief[key] as string | undefined)?.trim();
+        if (!val || val === "N/A" || val === "None.") continue;
 
+        if (y > 260) { doc.addPage(); y = 22; }
+
+        // Section label
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
+        doc.setFontSize(8);
         doc.setTextColor(26, 122, 74);
         doc.text(label.toUpperCase(), margin, y);
         y += 5;
 
+        // Section content
         doc.setFont("helvetica", "normal");
         doc.setFontSize(10);
-        doc.setTextColor(30, 30, 30);
+        doc.setTextColor(28, 28, 28);
         const lines = doc.splitTextToSize(val, contentW);
         for (const line of lines) {
-          if (y > 272) { doc.addPage(); y = 20; }
+          if (y > 275) { doc.addPage(); y = 22; }
           doc.text(line, margin, y);
           y += 5;
         }
-        y += 4;
+        y += 5;
+
+        // Light separator
+        doc.setDrawColor(230, 230, 228);
+        doc.setLineWidth(0.2);
+        if (y < 270) doc.line(margin, y - 2, pageW - margin, y - 2);
+
+        sectionsWritten++;
+      }
+
+      // Validate that meaningful content was written
+      if (sectionsWritten < 3) {
+        return { url: null, error: "PDF content was incomplete — fewer than 3 sections were populated. Please try again." };
       }
 
       const pdfDataUrl = doc.output("datauristring");
+
+      // Validate PDF output size (a real PDF with content should exceed 8KB of base64)
+      if (pdfDataUrl.length < 8000) {
+        return { url: null, error: "Generated PDF appears to be blank or incomplete. Please try again." };
+      }
+
       const res = await fetch("/api/upload-artifact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, type: "pdf", dataUrl: pdfDataUrl }),
       });
-      if (!res.ok) return null;
-      const data = await res.json() as { ok?: boolean; url?: string };
-      return data.url ?? null;
-    } catch {
-      return null;
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({})) as { error?: string };
+        return { url: null, error: errData.error ?? "Upload failed. Please try again." };
+      }
+      const data = await res.json() as { ok?: boolean; url?: string; error?: string };
+      if (!data.ok) return { url: null, error: data.error ?? "Upload failed. Please try again." };
+      return { url: data.url ?? null };
+    } catch (e) {
+      return { url: null, error: e instanceof Error ? e.message : "PDF generation failed. Please try again." };
     }
   }
 
   // Handle founder confirming the edited brief
   async function handleBriefConfirm(edited: HiringBrief) {
     setReviewSaving(true);
+    setExportError(null);
     try {
-      // 1. Generate PDF of confirmed brief and upload
-      const pdfUrl = await generateAndUploadPdf(edited);
+      // 1. Generate PDF of confirmed brief and upload — validates content before uploading
+      const pdfResult = await generateAndUploadPdf(edited);
+      if (pdfResult.error) {
+        setExportError(pdfResult.error);
+        setReviewSaving(false);
+        return;
+      }
+      const pdfUrl = pdfResult.url;
 
       // 2. Record to completed_intakes (ties sessionId → screenshot + PDF)
       await fetch("/api/complete-intake", {
@@ -1443,6 +1524,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
                   brief={hiringBrief}
                   onConfirm={handleBriefConfirm}
                   saving={reviewSaving}
+                  exportError={exportError}
                 />
               )}
 

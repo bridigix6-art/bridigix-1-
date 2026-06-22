@@ -40,6 +40,15 @@ router.post("/upload-artifact", async (req, res) => {
 
     const buffer = Buffer.from(base64Match[1], "base64");
 
+    // Validate minimum file sizes — reject blank/empty uploads
+    const MIN_SIZES = { screenshot: 2000, pdf: 5000 };
+    const minSize = isScreenshot ? MIN_SIZES.screenshot : MIN_SIZES.pdf;
+    if (buffer.length < minSize) {
+      req.log.warn({ type, size: buffer.length, minSize }, "Artifact rejected: below minimum size threshold");
+      res.status(422).json({ error: `${isScreenshot ? "Screenshot" : "PDF"} content appears blank or incomplete (${buffer.length} bytes, minimum ${minSize}). Regenerate and retry.` });
+      return;
+    }
+
     // Upload to Supabase Storage
     const { data, error } = await supabaseAdmin.storage
       .from(BUCKET)
