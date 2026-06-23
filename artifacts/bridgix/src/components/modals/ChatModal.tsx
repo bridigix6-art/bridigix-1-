@@ -1,9 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { flushSync } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import logoImage from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -12,23 +9,28 @@ interface ChatModalProps { open: boolean; onClose: () => void; }
 
 interface HiringBrief {
   companyContext: string;
+  hiringMotivation: string;
   role: string;
   seniorityOwnership: string;
   reportingStructure: string;
-  candidateProfile: string;
-  requirements: string;
-  workStyleCulture: string;
-  compensation: string;
-  timeline: string;
-  interviewProcess: string;
-  dealBreakers: string;
-  sellPoints: string;
-  pastHiringSignal: string;
   successMetrics: string;
-  validatedAssumptions: string;
+  mustHaves: string;
+  niceToHaves: string;
+  dealBreakers: string;
+  technicalRequirements: string;
+  workStyleCulture: string;
+  compensationModel: string;
+  interviewProcess: string;
+  decisionChain: string;
+  candidatePitch: string;
+  recruitingStrategy: string;
+  riskRegister: string;
+  assumptionLog: string;
+  pastHiringSignal: string;
+  timeline: string;
+  budget: string;
   contact: string;
   openFlags: string;
-  recruiterNotes: string;
   rawIntake?: string;
 }
 
@@ -116,23 +118,28 @@ function getTimeGreeting(): string {
 function parseIntakeComplete(text: string): HiringBrief {
   const FIELDS = [
     "COMPANY CONTEXT",
-    "THE ROLE",
+    "HIRING MOTIVATION",
+    "ROLE",
     "SENIORITY & OWNERSHIP",
     "REPORTING STRUCTURE",
-    "CANDIDATE PROFILE",
-    "REQUIREMENTS",
-    "WORK STYLE & CULTURE",
-    "COMPENSATION",
-    "TIMELINE",
-    "INTERVIEW PROCESS",
-    "DEAL BREAKERS",
-    "SELL POINTS",
-    "PAST HIRING SIGNAL",
     "SUCCESS METRICS",
-    "VALIDATED ASSUMPTIONS",
+    "CANDIDATE PROFILE — MUST-HAVES",
+    "CANDIDATE PROFILE — NICE-TO-HAVES",
+    "DEAL BREAKERS",
+    "TECHNICAL REQUIREMENTS",
+    "WORK STYLE & CULTURE",
+    "COMPENSATION MODEL",
+    "INTERVIEW PROCESS",
+    "DECISION CHAIN",
+    "CANDIDATE PITCH",
+    "RECRUITING STRATEGY",
+    "RISK REGISTER",
+    "ASSUMPTION LOG",
+    "PAST HIRING SIGNAL",
+    "TIMELINE",
+    "BUDGET",
     "CONTACT",
-    "OPEN FLAGS",
-    "RECRUITER NOTES",
+    "OPEN QUESTIONS OR FLAGS",
   ];
 
   const extractField = (label: string, nextLabel?: string): string => {
@@ -145,24 +152,29 @@ function parseIntakeComplete(text: string): HiringBrief {
   };
 
   return {
-    companyContext: extractField(FIELDS[0], FIELDS[1]),
-    role: extractField(FIELDS[1], FIELDS[2]),
-    seniorityOwnership: extractField(FIELDS[2], FIELDS[3]),
-    reportingStructure: extractField(FIELDS[3], FIELDS[4]),
-    candidateProfile: extractField(FIELDS[4], FIELDS[5]),
-    requirements: extractField(FIELDS[5], FIELDS[6]),
-    workStyleCulture: extractField(FIELDS[6], FIELDS[7]),
-    compensation: extractField(FIELDS[7], FIELDS[8]),
-    timeline: extractField(FIELDS[8], FIELDS[9]),
-    interviewProcess: extractField(FIELDS[9], FIELDS[10]),
-    dealBreakers: extractField(FIELDS[10], FIELDS[11]),
-    sellPoints: extractField(FIELDS[11], FIELDS[12]),
-    pastHiringSignal: extractField(FIELDS[12], FIELDS[13]),
-    successMetrics: extractField(FIELDS[13], FIELDS[14]),
-    validatedAssumptions: extractField(FIELDS[14], FIELDS[15]),
-    contact: extractField(FIELDS[15], FIELDS[16]),
-    openFlags: extractField(FIELDS[16], FIELDS[17]),
-    recruiterNotes: extractField(FIELDS[17]),
+    companyContext:       extractField(FIELDS[0],  FIELDS[1]),
+    hiringMotivation:    extractField(FIELDS[1],  FIELDS[2]),
+    role:                extractField(FIELDS[2],  FIELDS[3]),
+    seniorityOwnership:  extractField(FIELDS[3],  FIELDS[4]),
+    reportingStructure:  extractField(FIELDS[4],  FIELDS[5]),
+    successMetrics:      extractField(FIELDS[5],  FIELDS[6]),
+    mustHaves:           extractField(FIELDS[6],  FIELDS[7]),
+    niceToHaves:         extractField(FIELDS[7],  FIELDS[8]),
+    dealBreakers:        extractField(FIELDS[8],  FIELDS[9]),
+    technicalRequirements: extractField(FIELDS[9], FIELDS[10]),
+    workStyleCulture:    extractField(FIELDS[10], FIELDS[11]),
+    compensationModel:   extractField(FIELDS[11], FIELDS[12]),
+    interviewProcess:    extractField(FIELDS[12], FIELDS[13]),
+    decisionChain:       extractField(FIELDS[13], FIELDS[14]),
+    candidatePitch:      extractField(FIELDS[14], FIELDS[15]),
+    recruitingStrategy:  extractField(FIELDS[15], FIELDS[16]),
+    riskRegister:        extractField(FIELDS[16], FIELDS[17]),
+    assumptionLog:       extractField(FIELDS[17], FIELDS[18]),
+    pastHiringSignal:    extractField(FIELDS[18], FIELDS[19]),
+    timeline:            extractField(FIELDS[19], FIELDS[20]),
+    budget:              extractField(FIELDS[20], FIELDS[21]),
+    contact:             extractField(FIELDS[21], FIELDS[22]),
+    openFlags:           extractField(FIELDS[22]),
     rawIntake: text,
   };
 }
@@ -430,21 +442,28 @@ interface BriefField { label: string; value: string | string[] | undefined; }
 function buildSidebarFields(brief: HiringBrief | null, spec: CandidateSpec): BriefField[] {
   if (brief) {
     return [
-      { label: "Company Context", value: brief.companyContext },
-      { label: "The Role", value: brief.role },
+      { label: "Company Context",       value: brief.companyContext },
+      { label: "Hiring Motivation",     value: brief.hiringMotivation },
+      { label: "The Role",              value: brief.role },
       { label: "Seniority & Ownership", value: brief.seniorityOwnership },
-      { label: "Candidate Profile", value: brief.candidateProfile },
-      { label: "Requirements", value: brief.requirements },
-      { label: "Work Style & Culture", value: brief.workStyleCulture },
-      { label: "Compensation", value: brief.compensation },
-      { label: "Timeline", value: brief.timeline },
-      { label: "Interview Process", value: brief.interviewProcess },
-      { label: "Deal Breakers", value: brief.dealBreakers },
-      { label: "Sell Points", value: brief.sellPoints },
-      { label: "Success Metrics", value: brief.successMetrics },
-      { label: "Validated Assumptions", value: brief.validatedAssumptions },
-      { label: "Contact", value: brief.contact },
-      { label: "Open Flags", value: brief.openFlags },
+      { label: "Reporting Structure",   value: brief.reportingStructure },
+      { label: "Success Metrics",       value: brief.successMetrics },
+      { label: "Must-Haves",            value: brief.mustHaves },
+      { label: "Nice-to-Haves",         value: brief.niceToHaves },
+      { label: "Deal Breakers",         value: brief.dealBreakers },
+      { label: "Technical Requirements", value: brief.technicalRequirements },
+      { label: "Work Style & Culture",  value: brief.workStyleCulture },
+      { label: "Compensation",          value: brief.compensationModel },
+      { label: "Interview Process",     value: brief.interviewProcess },
+      { label: "Decision Chain",        value: brief.decisionChain },
+      { label: "Candidate Pitch",       value: brief.candidatePitch },
+      { label: "Risk Register",         value: brief.riskRegister },
+      { label: "Assumption Log",        value: brief.assumptionLog },
+      { label: "Past Hiring Signal",    value: brief.pastHiringSignal },
+      { label: "Timeline",              value: brief.timeline },
+      { label: "Budget",                value: brief.budget },
+      { label: "Contact",               value: brief.contact },
+      { label: "Open Flags",            value: brief.openFlags },
     ].filter(f => f.value && String(f.value).trim().length > 0);
   }
   return [
@@ -641,42 +660,76 @@ function UserBubble({ content }: { content: string }) {
 
 // ─── Doc 2: Editable Hiring Brief Review screen ───────────────────────────────
 
-const BRIEF_REVIEW_FIELDS: { key: keyof HiringBrief; label: string; hint: string; optional?: boolean }[] = [
-  { key: "companyContext", label: "Company Context", hint: "Stage, team size, what the company builds and the problem it solves" },
-  { key: "role", label: "The Role", hint: "Title, day-to-day responsibilities, new role or replacement context, week-one priorities" },
-  { key: "seniorityOwnership", label: "Seniority & Ownership", hint: "Minimum experience and why, what they own, autonomy expected, any direct reports" },
-  { key: "reportingStructure", label: "Reporting Structure", hint: "Who they report to by name and title, immediate peers, team shape" },
-  { key: "candidateProfile", label: "Ideal Candidate Profile", hint: "Career archetype, background, mindset, and operating style that fits this role" },
-  { key: "requirements", label: "Requirements", hint: "Must-have technical, nice-to-have technical, must-have culture fit, nice-to-have culture factors" },
-  { key: "workStyleCulture", label: "Work Style & Culture", hint: "Environment, pace, communication style, remote/hybrid/in-office with specifics" },
-  { key: "compensation", label: "Compensation", hint: "Salary range, equity, benefits, any market-rate notes" },
-  { key: "timeline", label: "Timeline", hint: "Target start date, urgency level, business impact of delay" },
-  { key: "interviewProcess", label: "Interview Process", hint: "Number of rounds, who evaluates what, how the final decision is made" },
-  { key: "dealBreakers", label: "Deal Breakers", hint: "Hard disqualifiers — technical and behavioral — that cause immediate rejection" },
-  { key: "sellPoints", label: "Sell Points", hint: "Why a strong, in-demand candidate should want this role over competing options" },
-  { key: "pastHiringSignal", label: "Past Hiring Signal", hint: "Prior attempts, what failed, founder concerns that shape candidate evaluation" },
-  { key: "successMetrics", label: "Success Metrics", hint: "What the new hire needs to achieve at 30, 60, and 90 days" },
-  { key: "validatedAssumptions", label: "Validated Assumptions", hint: "Inferred recruiter intelligence — observations, evidence, implications, success/failure patterns" },
-  { key: "contact", label: "Contact", hint: "Name, title, email, company, website" },
-  { key: "openFlags", label: "Open Flags", hint: "Contradictions, unresolved risks, areas needing additional diligence", optional: true },
-  { key: "recruiterNotes", label: "Recruiter Notes", hint: "Strategic sourcing notes, where to find candidates, how to pitch the role", optional: true },
+const BRIEF_REVIEW_FIELDS: { key: keyof HiringBrief; label: string; hint: string }[] = [
+  { key: "companyContext",       label: "Company Context",          hint: "Stage, team size, product description, the problem it solves" },
+  { key: "hiringMotivation",     label: "Hiring Motivation",        hint: "Why this role exists right now — the business urgency or catalyst" },
+  { key: "role",                 label: "The Role",                 hint: "Title, responsibilities, new or replacement, week one and month one" },
+  { key: "seniorityOwnership",   label: "Seniority & Ownership",    hint: "Experience required, what they own, autonomy, whether they manage anyone" },
+  { key: "reportingStructure",   label: "Reporting Structure",      hint: "Who they report to, team size and shape, management expectations" },
+  { key: "successMetrics",       label: "Success Metrics",          hint: "30-day, 60-day, 90-day, and 1-year outcomes for this hire" },
+  { key: "mustHaves",            label: "Must-Haves",               hint: "Non-negotiable technical and human requirements" },
+  { key: "niceToHaves",          label: "Nice-to-Haves",            hint: "Desired but non-blocking attributes" },
+  { key: "dealBreakers",         label: "Deal Breakers",            hint: "What would immediately disqualify a candidate" },
+  { key: "technicalRequirements", label: "Technical Requirements",  hint: "Must-have tech skills, nice-to-have tech skills, stack specifics" },
+  { key: "workStyleCulture",     label: "Work Style & Culture",     hint: "Remote/hybrid/in-office, timezone, async vs sync, team dynamic" },
+  { key: "compensationModel",    label: "Compensation Model",       hint: "Salary range, equity, benefits, visa sponsorship" },
+  { key: "interviewProcess",     label: "Interview Process",        hint: "Rounds, who conducts each stage, evaluation criteria, decision maker" },
+  { key: "decisionChain",        label: "Decision Chain",           hint: "Who makes the final call, other stakeholders, timeline from offer to decision" },
+  { key: "candidatePitch",       label: "Candidate Pitch",          hint: "Why a strong engineer should choose this role over competing options" },
+  { key: "recruitingStrategy",   label: "Recruiting Strategy",      hint: "Target profile, sourcing channels, referral opportunities, constraints" },
+  { key: "riskRegister",         label: "Risk Register",            hint: "Known risks: budget mismatch, timeline pressure, unclear scope" },
+  { key: "assumptionLog",        label: "Assumption Log",           hint: "What was inferred vs explicitly stated, with recruiting implications" },
+  { key: "pastHiringSignal",     label: "Past Hiring Signal",       hint: "Prior experience with this hire, what went wrong, founder concerns" },
+  { key: "timeline",             label: "Timeline",                 hint: "Urgency level, target start date, consequence of delay" },
+  { key: "budget",               label: "Budget",                   hint: "Salary range, equity, any mismatch flag with seniority" },
+  { key: "contact",              label: "Contact",                  hint: "Name, role, email, company website" },
+  { key: "openFlags",            label: "Open Flags",               hint: "Unresolved items, contradictions, risks before sourcing begins" },
 ];
 
 function HiringBriefReview({
   brief,
   onConfirm,
   saving,
-  exportError,
 }: {
   brief: HiringBrief;
   onConfirm: (edited: HiringBrief) => void;
   saving: boolean;
-  exportError?: string | null;
 }) {
   const [editing, setEditing] = useState<HiringBrief>({ ...brief });
+  const [downloading, setDownloading] = useState(false);
 
   const update = (key: keyof HiringBrief, value: string) => {
     setEditing(prev => ({ ...prev, [key]: value }));
+  };
+
+  const downloadPdf = async () => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      const res = await fetch("/api/generate-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brief: editing }),
+      });
+      if (!res.ok) {
+        const err = await res.json() as { message?: string };
+        alert(err.message ?? "Could not generate PDF. Check that all required fields are filled.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "hiring-brief.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Failed to download PDF. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -715,7 +768,7 @@ function HiringBriefReview({
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
         {BRIEF_REVIEW_FIELDS.map((field, i) => {
           const value = editing[field.key] as string;
-          if (!value && field.optional) return null;
+          if (!value && field.key === "openFlags") return null;
           return (
             <div key={field.key}>
               {i > 0 && <div style={{ height: 1, background: "#F0F0EE" }} />}
@@ -729,7 +782,7 @@ function HiringBriefReview({
                 <textarea
                   value={value}
                   onChange={e => update(field.key, e.target.value)}
-                  rows={value && value.length > 400 ? 8 : value && value.length > 120 ? 4 : 2}
+                  rows={value && value.length > 120 ? 4 : 2}
                   placeholder={`Edit ${field.label.toLowerCase()}...`}
                   style={{
                     width: "100%",
@@ -755,14 +808,9 @@ function HiringBriefReview({
         })}
       </div>
 
-      {/* Confirm button */}
+      {/* Confirm + Download buttons */}
       <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid #F0F0EE" }}>
-        {exportError && (
-          <div style={{ marginBottom: 16, padding: "12px 16px", background: "rgba(224,80,80,0.06)", border: "1px solid rgba(224,80,80,0.2)", borderRadius: 10, fontFamily: "Inter, sans-serif" }}>
-            <p style={{ fontSize: 13, color: "#C04040", margin: 0, lineHeight: 1.5 }}>{exportError}</p>
-          </div>
-        )}
-        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <button
             onClick={() => onConfirm(editing)}
             disabled={saving}
@@ -777,12 +825,29 @@ function HiringBriefReview({
             onMouseEnter={e => { if (!saving) { e.currentTarget.style.boxShadow = "0 6px 28px rgba(26,122,74,0.45)"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
             onMouseLeave={e => { e.currentTarget.style.boxShadow = saving ? "none" : "0 4px 20px rgba(26,122,74,0.30)"; e.currentTarget.style.transform = "none"; }}
           >
-            {saving ? "Generating brief..." : "Looks good, send to the team →"}
+            {saving ? "Sending..." : "Looks good, send to the team →"}
           </button>
-          <p style={{ fontSize: 12, color: "#B0B0B0" }}>
-            Profiles in your inbox within 5-7 days.
-          </p>
+          <button
+            onClick={downloadPdf}
+            disabled={downloading}
+            style={{
+              background: "white", color: DARK, border: `1.5px solid #E8E8E8`,
+              borderRadius: 12, padding: "14px 24px", fontSize: 14, fontWeight: 500,
+              cursor: downloading ? "wait" : "pointer", fontFamily: "Inter, sans-serif",
+              display: "flex", alignItems: "center", gap: 7, transition: "all 0.2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.color = ACCENT; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#E8E8E8"; e.currentTarget.style.color = DARK; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            {downloading ? "Generating..." : "Download PDF"}
+          </button>
         </div>
+        <p style={{ fontSize: 12, color: "#B0B0B0", marginTop: 10 }}>
+          Profiles in your inbox within 5-7 days.
+        </p>
       </div>
     </motion.div>
   );
@@ -912,7 +977,6 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const [contactFormIndex, setContactFormIndex] = useState<number | null>(null);
   const [hiringBrief, setHiringBrief] = useState<HiringBrief | null>(null);
   const [reviewSaving, setReviewSaving] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
   const [liveSpec, setLiveSpec] = useState<CandidateSpec>({});
   // Session ID — stable per modal session, prevents duplicate DB rows
   const [sessionId] = useState(() => crypto.randomUUID());
@@ -921,9 +985,6 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const isListeningRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const chatAreaRef = useRef<HTMLDivElement>(null);
-  // Track uploaded URLs so we can pass them to complete-intake on confirm
-  const screenshotUrlRef = useRef<string | null>(null);
 
   const spec = liveSpec;
 
@@ -988,7 +1049,6 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       setContactFormIndex(null);
       setHiringBrief(null);
       setReviewSaving(false);
-      setExportError(null);
       setShowSidebar(true);
       setLiveSpec({});
       return;
@@ -1060,221 +1120,32 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
   function continueSession() {
     if (!savedMessages) return;
-    const msgs = savedMessages;
-    setMessages(msgs);
+    setMessages(savedMessages);
     setLatestAiIndex(-1);
     setSessionPhase("chat");
     setSavedMessages(null);
-    // Section 3 fix: reconstruct the hiring brief sidebar from the loaded
-    // conversation history so it doesn't reset to empty on resume.
-    fetchLiveSpec(msgs).then(extracted => {
-      if (Object.keys(extracted).length > 0) setLiveSpec(extracted);
-    }).catch(() => {});
   }
 
   function handleEmailLoad(msgs: Message[]) {
     setMessages(msgs);
     setLatestAiIndex(-1);
     setSessionPhase("chat");
-    // Section 3 fix: reconstruct the hiring brief sidebar from the loaded
-    // conversation history so it doesn't reset to empty on resume.
-    fetchLiveSpec(msgs).then(extracted => {
-      if (Object.keys(extracted).length > 0) setLiveSpec(extracted);
-    }).catch(() => {});
-  }
-
-  // ─── Screenshot the chat area and upload to Supabase Storage ────────────────
-  async function captureAndUploadScreenshot(): Promise<string | null> {
-    const el = chatAreaRef.current;
-    if (!el) return null;
-    try {
-      const canvas = await html2canvas(el, {
-        backgroundColor: "#FAFAF8",
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-      });
-
-      // Validate canvas has real content (not a blank/empty capture)
-      if (canvas.width < 100 || canvas.height < 100) return null;
-      const dataUrl = canvas.toDataURL("image/png");
-      // A PNG with real content should be at least 3KB of base64
-      if (dataUrl.length < 3000) return null;
-
-      const res = await fetch("/api/upload-artifact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, type: "screenshot", dataUrl }),
-      });
-      if (!res.ok) return null;
-      const data = await res.json() as { ok?: boolean; url?: string; error?: string };
-      if (!data.ok) return null;
-      return data.url ?? null;
-    } catch {
-      return null;
-    }
-  }
-
-  // ─── Generate hiring brief PDF and upload to Supabase Storage ────────────────
-  async function generateAndUploadPdf(brief: HiringBrief): Promise<{ url: string | null; error?: string }> {
-    try {
-      const doc = new jsPDF({ unit: "mm", format: "a4" });
-      const pageW = 210;
-      const margin = 18;
-      const contentW = pageW - margin * 2;
-      let y = 22;
-
-      // ── Cover header ──────────────────────────────────────────────────────────
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(22);
-      doc.setTextColor(26, 122, 74);
-      doc.text("Hiring Brief", margin, y);
-      y += 7;
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      doc.setTextColor(120, 120, 120);
-      const dateStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
-      doc.text(`Bridgix Executive Search  ·  Prepared ${dateStr}`, margin, y);
-      if (brief.contact) {
-        const emailMatch = brief.contact.match(/Email:\s*([^\n]+)/i);
-        if (emailMatch) {
-          const emailStr = `Client: ${emailMatch[1].trim()}`;
-          doc.text(emailStr, margin + contentW - doc.getTextWidth(emailStr), y);
-        }
-      }
-      y += 5;
-
-      doc.setDrawColor(26, 122, 74);
-      doc.setLineWidth(0.5);
-      doc.line(margin, y, pageW - margin, y);
-      y += 8;
-
-      const PDF_FIELDS: Array<[string, keyof HiringBrief]> = [
-        ["Company Context", "companyContext"],
-        ["The Role", "role"],
-        ["Seniority & Ownership", "seniorityOwnership"],
-        ["Reporting Structure", "reportingStructure"],
-        ["Ideal Candidate Profile", "candidateProfile"],
-        ["Requirements", "requirements"],
-        ["Work Style & Culture", "workStyleCulture"],
-        ["Compensation", "compensation"],
-        ["Timeline", "timeline"],
-        ["Interview Process", "interviewProcess"],
-        ["Deal Breakers", "dealBreakers"],
-        ["Sell Points", "sellPoints"],
-        ["Past Hiring Signal", "pastHiringSignal"],
-        ["Success Metrics", "successMetrics"],
-        ["Validated Assumptions", "validatedAssumptions"],
-        ["Contact", "contact"],
-        ["Open Flags", "openFlags"],
-        ["Recruiter Notes", "recruiterNotes"],
-      ];
-
-      let sectionsWritten = 0;
-
-      for (const [label, key] of PDF_FIELDS) {
-        const val = (brief[key] as string | undefined)?.trim();
-        if (!val || val === "N/A" || val === "None.") continue;
-
-        if (y > 260) { doc.addPage(); y = 22; }
-
-        // Section label
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(26, 122, 74);
-        doc.text(label.toUpperCase(), margin, y);
-        y += 5;
-
-        // Section content
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(28, 28, 28);
-        const lines = doc.splitTextToSize(val, contentW);
-        for (const line of lines) {
-          if (y > 275) { doc.addPage(); y = 22; }
-          doc.text(line, margin, y);
-          y += 5;
-        }
-        y += 5;
-
-        // Light separator
-        doc.setDrawColor(230, 230, 228);
-        doc.setLineWidth(0.2);
-        if (y < 270) doc.line(margin, y - 2, pageW - margin, y - 2);
-
-        sectionsWritten++;
-      }
-
-      // Validate that meaningful content was written
-      if (sectionsWritten < 3) {
-        return { url: null, error: "PDF content was incomplete — fewer than 3 sections were populated. Please try again." };
-      }
-
-      const pdfDataUrl = doc.output("datauristring");
-
-      // Validate PDF output size (a real PDF with content should exceed 8KB of base64)
-      if (pdfDataUrl.length < 8000) {
-        return { url: null, error: "Generated PDF appears to be blank or incomplete. Please try again." };
-      }
-
-      const res = await fetch("/api/upload-artifact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, type: "pdf", dataUrl: pdfDataUrl }),
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({})) as { error?: string };
-        return { url: null, error: errData.error ?? "Upload failed. Please try again." };
-      }
-      const data = await res.json() as { ok?: boolean; url?: string; error?: string };
-      if (!data.ok) return { url: null, error: data.error ?? "Upload failed. Please try again." };
-      return { url: data.url ?? null };
-    } catch (e) {
-      return { url: null, error: e instanceof Error ? e.message : "PDF generation failed. Please try again." };
-    }
   }
 
   // Handle founder confirming the edited brief
   async function handleBriefConfirm(edited: HiringBrief) {
     setReviewSaving(true);
-    setExportError(null);
     try {
-      // 1. Generate PDF of confirmed brief and upload — validates content before uploading
-      const pdfResult = await generateAndUploadPdf(edited);
-      if (pdfResult.error) {
-        setExportError(pdfResult.error);
-        setReviewSaving(false);
-        return;
-      }
-      const pdfUrl = pdfResult.url;
-
-      // 2. Record to completed_intakes (ties sessionId → screenshot + PDF)
-      await fetch("/api/complete-intake", {
+      await fetch("/api/save-hiring-brief", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId,
           email: detectedEmail,
-          screenshotUrl: screenshotUrlRef.current,
-          pdfUrl,
+          sessionId,
+          brief: edited,
+          status: "confirmed",
         }),
-      }).catch(() => {});
-
-      // 3. Also update chat_conversations status for load-chat recovery
-      if (detectedEmail || sessionId) {
-        await fetch("/api/save-hiring-brief", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: detectedEmail,
-            sessionId,
-            brief: edited,
-            status: "confirmed",
-          }),
-        }).catch(() => {});
-      }
+      });
     } catch { /* non-fatal */ }
     setHiringBrief(edited);
     setReviewSaving(false);
@@ -1305,30 +1176,13 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       });
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({})) as { error?: string; message?: string; detail?: string };
-        // Section 4 fix: differentiate actual error causes rather than showing
-        // a generic "AI busy" message for all failures.
+        const errData = await res.json().catch(() => ({}));
         if (res.status === 429) {
-          // Genuine Groq rate limit — the API server sets this specifically
-          const errMsg = errData.message || "The AI is a bit busy right now. Try again in a moment.";
+          const errMsg = (errData as { message?: string }).message || "The AI is a bit busy right now. Try again in a moment.";
           setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: errMsg }]; setLatestAiIndex(u.length - 1); return u; });
           return;
         }
-        if (res.status === 400) {
-          const errMsg = "The conversation couldn't be sent — it may be too long. Try starting a fresh conversation.";
-          setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: errMsg }]; setLatestAiIndex(u.length - 1); return u; });
-          return;
-        }
-        if (res.status === 500 && errData.error === "AI service not configured") {
-          setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: "The AI service isn't configured yet. Please try again later." }]; setLatestAiIndex(u.length - 1); return u; });
-          return;
-        }
-        if (res.status === 500 && errData.error === "Failed to get AI response") {
-          const detail = errData.detail ? ` (${errData.detail})` : "";
-          setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: `The AI ran into an error${detail}. Please try again in a moment.` }]; setLatestAiIndex(u.length - 1); return u; });
-          return;
-        }
-        throw new Error(`HTTP ${res.status}: ${errData.error ?? "Unknown error"}`);
+        throw new Error(`HTTP ${res.status}`);
       }
 
       const data = await res.json();
@@ -1349,14 +1203,6 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
         // Parse the brief and transition to review screen
         const parsed = parseIntakeComplete(reply);
-
-        // Fire-and-forget screenshot capture after a short delay (let DOM settle)
-        setTimeout(() => {
-          captureAndUploadScreenshot().then(url => {
-            screenshotUrlRef.current = url;
-          }).catch(() => {});
-        }, 600);
-
         setTimeout(() => {
           setHiringBrief(parsed);
           setSessionPhase("review");
@@ -1381,12 +1227,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   }, [input, loading, messages, complete, sessionPhase, sessionId]);
 
   const handleInteractiveConfirm = useCallback((messageIndex: number, value: string) => {
-    // Section 2 fix: flush the state update synchronously so the element
-    // is removed from the DOM before sendMessage runs and before any
-    // intermediate re-render can show it again.
-    flushSync(() => {
-      setInteractiveUsed(prev => new Set([...prev, messageIndex]));
-    });
+    setInteractiveUsed(prev => new Set([...prev, messageIndex]));
     sendMessage(value);
   }, [sendMessage]);
 
@@ -1404,16 +1245,6 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const showNoConversation = sessionPhase === "chat" && messages.length === 0;
   const showRecovery = sessionPhase === "chat" && !recoveryBarHidden;
   const hasSidebarContent = Object.values(spec).some(v => v && (Array.isArray(v) ? v.length > 0 : true)) || hiringBrief !== null;
-
-  // Section 1 fix: when an interactive element is the pending answer for the last
-  // AI message, the element IS the answer — the text input should be blocked so
-  // users know they don't need to (and can't) type anything in addition.
-  const lastMsgIndex = messages.length - 1;
-  const lastMsg = messages.length > 0 ? messages[lastMsgIndex] : null;
-  const activeInteractiveType = lastMsg?.role === "assistant" ? detectInteractiveType(lastMsg.content) : null;
-  const hasActiveInteractive = activeInteractiveType !== null && !interactiveUsed.has(lastMsgIndex) && !loading && !complete;
-  const hasActiveContactForm = contactFormIndex !== null && contactFormIndex === lastMsgIndex && !interactiveUsed.has(contactFormIndex) && !loading && !complete;
-  const blockTextInput = hasActiveInteractive || hasActiveContactForm;
 
   return (
     <AnimatePresence>
@@ -1524,13 +1355,12 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
                   brief={hiringBrief}
                   onConfirm={handleBriefConfirm}
                   saving={reviewSaving}
-                  exportError={exportError}
                 />
               )}
 
               {/* Chat area — shown when sessionPhase === "chat" */}
               {sessionPhase !== "review" && (
-                <div ref={chatAreaRef} className="max-w-[780px] mx-auto px-6 py-8 flex flex-col h-full">
+                <div className="max-w-[780px] mx-auto px-6 py-8 flex flex-col h-full">
 
                   {showNoConversation && (
                     <div className="flex-1 flex flex-col items-center justify-center text-center">
@@ -1607,66 +1437,59 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
           {sessionPhase === "chat" && !complete && (
             <div className="flex-shrink-0" style={{ background: "rgba(250,250,248,0.97)", borderTop: "1px solid rgba(0,0,0,0.07)", backdropFilter: "blur(12px)" }}>
               <div className="max-w-[780px] mx-auto px-6 py-4">
-                {/* Section 1 fix: when an interactive element is waiting, show a hint
-                    instead of the text input so users know the element IS the answer */}
-                {blockTextInput ? (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 56, background: "rgba(26,122,74,0.04)", border: "1.5px dashed rgba(26,122,74,0.18)", borderRadius: 14, padding: "14px 20px" }}>
-                    <p style={{ fontFamily: "Inter, sans-serif", fontSize: 14, color: "#6B6B6B", textAlign: "center", margin: 0 }}>
-                      Use the selector above to answer, then click <strong style={{ color: ACCENT }}>Confirm</strong>
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex items-end gap-3">
-                    <textarea
-                      ref={textareaRef}
-                      value={input}
-                      onChange={handleInput}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Reply..."
-                      rows={1}
-                      style={{
-                        flex: 1, border: "1.5px solid #E4E4E2", borderRadius: 14, padding: "16px 20px",
-                        fontFamily: "Inter, sans-serif", fontSize: 17, color: DARK,
-                        resize: "none", minHeight: 56, maxHeight: 150, overflowY: "auto",
-                        outline: "none", transition: "border-color 0.2s, box-shadow 0.2s", lineHeight: 1.55,
-                        background: "#FFFFFF", boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                      }}
-                      onFocus={e => { e.target.style.borderColor = ACCENT; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
-                      onBlur={e => { e.target.style.borderColor = "#E4E4E2"; e.target.style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)"; }}
-                    />
-                    <button
-                      onClick={handleMicClick}
-                      type="button"
-                      title={isListening ? "Stop listening" : "Voice input"}
-                      style={{
-                        width: 56, height: 56, borderRadius: 14, border: "none", flexShrink: 0,
-                        background: isListening ? "linear-gradient(135deg, #E05050, #FF7070)" : AI_BUBBLE_BG,
-                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s",
-                      }}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" stroke={isListening ? "white" : ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8" stroke={isListening ? "white" : ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => sendMessage()}
-                      disabled={!input.trim() || loading}
-                      style={{
-                        width: 56, height: 56, borderRadius: 14, border: "none", flexShrink: 0,
-                        background: !input.trim() || loading ? "#E4E4E2" : `linear-gradient(135deg, ${ACCENT}, #2A9D5C)`,
-                        cursor: !input.trim() || loading ? "not-allowed" : "pointer",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        boxShadow: input.trim() && !loading ? "0 4px 14px rgba(26,122,74,0.3)" : "none",
-                        transition: "all 0.2s",
-                      }}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                        <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z" stroke={!input.trim() || loading ? "#B0B0B0" : "white"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </button>
-                  </div>
-                )}
+                <div className="flex items-end gap-3">
+                  {/* Section 4: larger font size */}
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={handleInput}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Reply..."
+                    rows={1}
+                    style={{
+                      flex: 1, border: "1.5px solid #E4E4E2", borderRadius: 14, padding: "16px 20px",
+                      fontFamily: "Inter, sans-serif", fontSize: 17, color: DARK,
+                      resize: "none", minHeight: 56, maxHeight: 150, overflowY: "auto",
+                      outline: "none", transition: "border-color 0.2s, box-shadow 0.2s", lineHeight: 1.55,
+                      background: "#FFFFFF", boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                    }}
+                    onFocus={e => { e.target.style.borderColor = ACCENT; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
+                    onBlur={e => { e.target.style.borderColor = "#E4E4E2"; e.target.style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)"; }}
+                  />
+                  {/* Section 5: microphone — direct handler, no useCallback */}
+                  <button
+                    onClick={handleMicClick}
+                    type="button"
+                    title={isListening ? "Stop listening" : "Voice input"}
+                    style={{
+                      width: 56, height: 56, borderRadius: 14, border: "none", flexShrink: 0,
+                      background: isListening ? "linear-gradient(135deg, #E05050, #FF7070)" : AI_BUBBLE_BG,
+                      cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s",
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" stroke={isListening ? "white" : ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8" stroke={isListening ? "white" : ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                  {/* Send button */}
+                  <button
+                    onClick={() => sendMessage()}
+                    disabled={!input.trim() || loading}
+                    style={{
+                      width: 56, height: 56, borderRadius: 14, border: "none", flexShrink: 0,
+                      background: !input.trim() || loading ? "#E4E4E2" : `linear-gradient(135deg, ${ACCENT}, #2A9D5C)`,
+                      cursor: !input.trim() || loading ? "not-allowed" : "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      boxShadow: input.trim() && !loading ? "0 4px 14px rgba(26,122,74,0.3)" : "none",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z" stroke={!input.trim() || loading ? "#B0B0B0" : "white"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
                 <p style={{ fontFamily: "Inter, sans-serif", fontSize: 11, color: "#B0B0B0", marginTop: 8, textAlign: "center" }}>
                   Bridgix hiring partner · Responses within seconds
                 </p>
