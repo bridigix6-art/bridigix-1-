@@ -45,3 +45,21 @@ SUPABASE_URL = "https://vtgbivniyrrmtyyczvjn.supabase.co"
 SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2Jpdm5peXJybXR5eWN6dmpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NjE2OTQsImV4cCI6MjA5NzQzNzY5NH0.pyrT_F3Wf01DGmauxhP2hbSpS7LHpKxUq3LqQOFVbi8"
 PORT = "5000"
 BASE_PATH = "/"
+
+[[workflows.workflow]]
+name = "Run App"
+author = "user"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/bridgix && pnpm run dev"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Run App"
+author = "user"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/bridgix && pnpm run dev"
+waitForPort = 5000
