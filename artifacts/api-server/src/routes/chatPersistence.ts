@@ -1,83 +1,70 @@
 import { Router } from "express";
 import { supabase } from "../lib/supabase";
+import {
+  saveSessionMessages,
+  upsertSessionState,
+  loadCompletedSessionByEmail,
+  loadSession,
+  updateSessionStatus,
+} from "../lib/sessionPersistence";
 
 const router = Router();
 
-// ─── Save chat (keyed by email, select+update/insert) ─────────────────────────
+// ─── Save chat to session-backed tables ───────────────────────────────────
 router.post("/save-chat", async (req, res) => {
   try {
     const { email, messages, sessionId } = req.body as {
-      email: string;
+      email?: string;
       messages: Array<{ role: string; content: string }>;
       sessionId?: string;
     };
 
-    if (!email || !Array.isArray(messages)) {
-      res.status(400).json({ error: "email and messages are required" });
+    if (!Array.isArray(messages) || !messages.every((m) => m && typeof m.role === "string" && typeof m.content === "string")) {
+      res.status(400).json({ error: "messages must be an array of role/content objects" });
+      return;
+    }
+    if (!sessionId) {
+      res.status(400).json({ error: "sessionId is required" });
       return;
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
-    const ipAddress = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
-      || req.socket.remoteAddress || "";
-    const userAgent = req.headers["user-agent"] ?? "";
+    await saveSessionMessages(sessionId, messages);
 
-    // Try to find by email first, then session_id
-    let existing = null;
-    const { data: byEmail } = await supabase
-      .from("chat_conversations")
-      .select("id")
-      .eq("email", normalizedEmail)
-      .maybeSingle();
-    existing = byEmail;
-
-    if (!existing && sessionId) {
-      const { data: bySession } = await supabase
-        .from("chat_conversations")
-        .select("id")
-        .eq("session_id", sessionId)
-        .maybeSingle();
-      existing = bySession;
-    }
-
-    let error;
-    if (existing) {
-      const { error: updateErr } = await supabase
-        .from("chat_conversations")
-        .update({
-          email: normalizedEmail,
-          messages,
-          ip_address: ipAddress,
-          user_agent: userAgent,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existing.id);
-      error = updateErr;
-    } else {
-      const { error: insertErr } = await supabase
-        .from("chat_conversations")
-        .insert({
-          email: normalizedEmail,
-          session_id: sessionId ?? null,
-          messages,
-          ip_address: ipAddress,
-          user_agent: userAgent,
-          status: "in_progress",
-          updated_at: new Date().toISOString(),
-        });
-      error = insertErr;
-    }
-
-    if (error) {
-      req.log.error({ error }, "Supabase save-chat error");
-      res.status(500).json({ error: "Failed to save chat" });
-      return;
+    if (email) {
+      await upsertSessionState(sessionId, { email: email.toLowerCase().trim() });
     }
 
     res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Unexpected save-chat error");
     res.status(500).json({ error: "Failed to save chat" });
+  }
+});
+
+// ─── Load session by sessionId (resumes in-progress sessions) ──────────────
+router.get("/load-session", async (req, res) => {
+  try {
+    const { sessionId } = req.query as { sessionId?: string };
+    if (!sessionId) {
+      res.status(400).json({ error: "sessionId is required" });
+      return;
+    }
+
+    const session = await loadSession(sessionId);
+    if (!session || session.messages.length === 0) {
+      res.json({ found: false });
+      return;
+    }
+
+    res.json({
+      found: true,
+      messages: session.messages,
+      status: session.status,
+      state: session.state,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Unexpected load-session error");
+    res.status(500).json({ error: "Failed to load session" });
   }
 });
 
@@ -90,29 +77,13 @@ router.get("/load-chat", async (req, res) => {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("chat_conversations")
-      .select("messages, intake_summary, status")
-      .eq("email", email.toLowerCase().trim())
-      .eq("status", "complete")
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      req.log.error({ error }, "Supabase load-chat error");
-      res.status(500).json({ error: "Failed to load chat" });
-      return;
-    }
-
-    // Only return if messages actually exist and intake is complete
-    const messages = data?.messages;
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    const session = await loadCompletedSessionByEmail(email);
+    if (!session || session.messages.length === 0) {
       res.json({ found: false });
       return;
     }
 
-    res.json({ found: true, messages, intakeSummary: data?.intake_summary ?? null });
+    res.json({ found: true, messages: session.messages, intakeSummary: session.intakeSummary });
   } catch (err) {
     req.log.error({ err }, "Unexpected load-chat error");
     res.status(500).json({ error: "Failed to load chat" });
@@ -161,7 +132,19 @@ router.post("/save-hiring-brief", async (req, res) => {
 
     const briefStatus = status ?? "confirmed";
 
-    // Persist confirmed brief as structured JSON in chat_conversations
+    // Persist confirmed brief into the new session state tables
+    if (sessionId) {
+      await upsertSessionState(sessionId, {
+        email: email?.toLowerCase().trim() ?? null,
+        status: briefStatus,
+        intakeSummary: "complete",
+      });
+      if (briefStatus === "confirmed") {
+        await updateSessionStatus(sessionId, "complete");
+      }
+    }
+
+    // Persist confirmed brief as structured JSON in chat_conversations for legacy compatibility
     if (email || sessionId) {
       const query = supabase
         .from("chat_conversations")

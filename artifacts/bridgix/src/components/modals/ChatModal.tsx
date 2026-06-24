@@ -62,7 +62,7 @@ function pickFirstMessage(): string {
   return FIRST_MESSAGE_VARIANTS[Math.floor(Math.random() * FIRST_MESSAGE_VARIANTS.length)];
 }
 
-const LS_KEY = "bridigix_chat";
+const STORAGE_SESSION_ID_KEY = "bridigix_session_id";
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 const COOKIE_KEY = "bridigix_tz";
 
@@ -978,8 +978,13 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const [hiringBrief, setHiringBrief] = useState<HiringBrief | null>(null);
   const [reviewSaving, setReviewSaving] = useState(false);
   const [liveSpec, setLiveSpec] = useState<CandidateSpec>({});
-  // Session ID — stable per modal session, prevents duplicate DB rows
-  const [sessionId] = useState(() => crypto.randomUUID());
+  const [sessionId] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(STORAGE_SESSION_ID_KEY);
+      if (stored) return stored;
+    }
+    return crypto.randomUUID();
+  });
 
   const recognitionRef = useRef<{ stop: () => void } | null>(null);
   const isListeningRef = useRef(false);
@@ -1053,6 +1058,14 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       setLiveSpec({});
       return;
     }
+
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(STORAGE_SESSION_ID_KEY);
+      if (!stored || stored !== sessionId) {
+        localStorage.setItem(STORAGE_SESSION_ID_KEY, sessionId);
+      }
+    }
+
     // Track visitor session on modal open
     const tz = getOrSetTimezone();
     fetch("/api/track-session", {
@@ -1061,27 +1074,40 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       body: JSON.stringify({ timezone: tz }),
     }).catch(() => {});
 
-    try {
-      const saved = localStorage.getItem(LS_KEY);
-      if (saved) {
-        const parsed: Message[] = JSON.parse(saved);
-        if (parsed.length > 0) {
-          setSavedMessages(parsed);
+    const loadSession = async () => {
+      try {
+        const res = await fetch(`/api/load-session?sessionId=${encodeURIComponent(sessionId)}`);
+        if (!res.ok) {
+          startFresh();
+          return;
+        }
+        const data = await res.json() as {
+          found?: boolean;
+          messages?: Message[];
+          status?: string;
+          state?: Record<string, unknown>;
+        };
+        if (data.found && Array.isArray(data.messages) && data.messages.length > 0 && data.status === "in_progress") {
+          setSavedMessages(data.messages);
           setSessionPhase("continue_banner");
           return;
         }
+      } catch {
+        // ignore and start fresh
       }
-    } catch { /* ignore */ }
-    startFresh();
+      startFresh();
+    };
+
+    loadSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Persist to localStorage
+  // Persist sessionId locally
   useEffect(() => {
-    if (messages.length > 0 && sessionPhase === "chat") {
-      try { localStorage.setItem(LS_KEY, JSON.stringify(messages)); } catch { /* ignore */ }
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_SESSION_ID_KEY, sessionId);
     }
-  }, [messages, sessionPhase]);
+  }, [sessionId]);
 
   // Detect email in conversation
   useEffect(() => {
@@ -1091,15 +1117,15 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
     if (match && !detectedEmail) setDetectedEmail(match[0]);
   }, [messages, detectedEmail]);
 
-  // Save to DB via save-chat when email detected
+  // Save to DB via save-chat on every message update
   useEffect(() => {
-    if (!detectedEmail || messages.length === 0) return;
+    if (messages.length === 0 || sessionPhase !== "chat") return;
     fetch("/api/save-chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: detectedEmail, messages, sessionId }),
+      body: JSON.stringify({ email: detectedEmail ?? undefined, messages, sessionId }),
     }).catch(() => {});
-  }, [messages, detectedEmail, sessionId]);
+  }, [messages, detectedEmail, sessionPhase, sessionId]);
 
   function startFresh() {
     setMessages([]);
@@ -1151,7 +1177,6 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
     setReviewSaving(false);
     setComplete(true);
     setSessionPhase("chat");
-    try { localStorage.removeItem(LS_KEY); } catch { /* ignore */ }
   }
 
   const sendMessage = useCallback(async (overrideText?: string) => {
