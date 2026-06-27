@@ -1439,6 +1439,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
                     {messages.map((msg, i) => {
                       if (msg.role === "assistant") {
                         const shouldShowInteractive = i === activeWidgetIndex && !loading && !complete;
+                        const interactiveType = detectInteractiveType(msg.content);
                         const shouldShowContactForm = i === contactFormIndex && !interactiveUsed.has(i) && !loading && !complete;
                         return (
                           <div key={i}>
