@@ -5,27 +5,19 @@ const supabaseUrl = process.env["SUPABASE_URL"] ?? "";
 const supabaseAnonKey = process.env["SUPABASE_ANON_KEY"] ?? "";
 const supabaseServiceKey = process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? supabaseAnonKey;
 
-const supabaseOptions = {
-  realtime: {
-    transport: WebSocket as unknown as typeof globalThis.WebSocket,
-  },
-};
+const wsOptions = { realtime: { transport: WebSocket as unknown as typeof globalThis.WebSocket } };
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseOptions);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, wsOptions);
 
-// Service-role client — used for storage uploads and admin operations
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, supabaseOptions);
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, wsOptions);
 
 export async function initializeDatabase() {
-  // Create tables via supabase-js insert/select patterns (no raw SQL RPC needed)
-  // completed_intakes: lightweight lookup table for confirmed briefs
   const { error: ciError } = await supabaseAdmin
     .from("completed_intakes")
     .select("id")
     .limit(1);
 
   if (ciError && ciError.code === "42P01") {
-    // Table doesn't exist — create it via management API
     const projectRef = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1];
     if (projectRef) {
       const sql = `

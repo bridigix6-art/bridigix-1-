@@ -320,18 +320,17 @@ function ChoiceInput({ onConfirm }: { onConfirm: (value: string) => void }) {
 function ContactFormBar({ onConfirm }: { onConfirm: (value: string) => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [company, setCompany] = useState("");
   const [website, setWebsite] = useState("");
-  const [errors, setErrors] = useState<{ name?: string; email?: string; company?: string; website?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
 
   const handleSubmit = () => {
-    const e: { name?: string; email?: string; company?: string; website?: string } = {};
+    const e: { name?: string; email?: string } = {};
     if (!name.trim()) e.name = "Required";
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) e.email = "Valid email required";
-    if (!company.trim()) e.company = "Required";
-    if (!website.trim()) e.website = "Required";
     if (Object.keys(e).length) { setErrors(e); return; }
-    onConfirm(`Name: ${name.trim()}, Email: ${email.trim()}, Company: ${company.trim()}, Website: ${website.trim()}`);
+    const parts = [`Name: ${name.trim()}`, `Email: ${email.trim()}`];
+    if (website.trim()) parts.push(`Company website: ${website.trim()}`);
+    onConfirm(parts.join(", "));
   };
 
   const fieldStyle = (hasError?: boolean): React.CSSProperties => ({
@@ -397,33 +396,17 @@ function ContactFormBar({ onConfirm }: { onConfirm: (value: string) => void }) {
         </div>
         <div>
           <label style={{ fontSize: 12, fontWeight: 600, color: "#4A4A4A", display: "block", marginBottom: 5 }}>
-            Company Name <span style={{ color: ACCENT }}>*</span>
-          </label>
-          <input
-            value={company}
-            onChange={e => { setCompany(e.target.value); setErrors(prev => ({ ...prev, company: undefined })); }}
-            onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }}
-            placeholder="Acme Inc."
-            style={fieldStyle(!!errors.company)}
-            onFocus={e => { e.target.style.borderColor = ACCENT; }}
-            onBlur={e => { e.target.style.borderColor = errors.company ? "#E05050" : "#E0E0DE"; }}
-          />
-          {errors.company && <span style={{ fontSize: 11, color: "#E05050", marginTop: 3, display: "block" }}>{errors.company}</span>}
-        </div>
-        <div>
-          <label style={{ fontSize: 12, fontWeight: 600, color: "#4A4A4A", display: "block", marginBottom: 5 }}>
-            Website / Domain <span style={{ color: ACCENT }}>*</span>
+            Company Website <span style={{ color: "#B0B0B0", fontWeight: 400 }}>(optional)</span>
           </label>
           <input
             value={website}
-            onChange={e => { setWebsite(e.target.value); setErrors(prev => ({ ...prev, website: undefined })); }}
+            onChange={e => setWebsite(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }}
             placeholder="company.com"
-            style={fieldStyle(!!errors.website)}
+            style={fieldStyle()}
             onFocus={e => { e.target.style.borderColor = ACCENT; }}
-            onBlur={e => { e.target.style.borderColor = errors.website ? "#E05050" : "#E0E0DE"; }}
+            onBlur={e => { e.target.style.borderColor = "#E0E0DE"; }}
           />
-          {errors.website && <span style={{ fontSize: 11, color: "#E05050", marginTop: 3, display: "block" }}>{errors.website}</span>}
         </div>
       </div>
       <button
@@ -719,14 +702,14 @@ function HiringBriefReview({
     setEditing(prev => ({ ...prev, [key]: value }));
   };
 
-  const downloadPdf = async (briefData?: HiringBrief) => {
+  const downloadPdf = async () => {
     if (downloading) return;
     setDownloading(true);
     try {
       const res = await fetch("/api/generate-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brief: briefData ?? editing }),
+        body: JSON.stringify({ brief: editing }),
       });
       if (!res.ok) {
         const err = await res.json() as { message?: string };
@@ -747,11 +730,6 @@ function HiringBriefReview({
     } finally {
       setDownloading(false);
     }
-  };
-
-  const handleConfirmAndDownload = async () => {
-    onConfirm(editing);
-    await downloadPdf(editing);
   };
 
   return (
@@ -832,39 +810,39 @@ function HiringBriefReview({
 
       {/* Confirm + Download buttons */}
       <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid #F0F0EE" }}>
-        <p style={{ fontSize: 13, color: "#6B6B6B", marginBottom: 16, lineHeight: 1.6 }}>
-          Review and edit any field above, then confirm to send to the team and download your brief as a PDF.
-        </p>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <button
-            onClick={handleConfirmAndDownload}
-            disabled={saving || downloading}
+            onClick={() => onConfirm(editing)}
+            disabled={saving}
             style={{
-              background: (saving || downloading) ? "#9B9B9B" : `linear-gradient(135deg, ${ACCENT}, #2A9D5C)`,
+              background: saving ? "#9B9B9B" : `linear-gradient(135deg, ${ACCENT}, #2A9D5C)`,
               color: "white", border: "none", borderRadius: 12,
               padding: "14px 32px", fontSize: 15, fontWeight: 600,
-              cursor: (saving || downloading) ? "wait" : "pointer", fontFamily: "Inter, sans-serif",
-              boxShadow: (saving || downloading) ? "none" : "0 4px 20px rgba(26,122,74,0.30)",
-              transition: "all 0.2s", display: "flex", alignItems: "center", gap: 8,
+              cursor: saving ? "wait" : "pointer", fontFamily: "Inter, sans-serif",
+              boxShadow: saving ? "none" : "0 4px 20px rgba(26,122,74,0.30)",
+              transition: "all 0.2s",
             }}
-            onMouseEnter={e => { if (!saving && !downloading) { e.currentTarget.style.boxShadow = "0 6px 28px rgba(26,122,74,0.45)"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow = (saving || downloading) ? "none" : "0 4px 20px rgba(26,122,74,0.30)"; e.currentTarget.style.transform = "none"; }}
+            onMouseEnter={e => { if (!saving) { e.currentTarget.style.boxShadow = "0 6px 28px rgba(26,122,74,0.45)"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow = saving ? "none" : "0 4px 20px rgba(26,122,74,0.30)"; e.currentTarget.style.transform = "none"; }}
           >
-            {downloading ? (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "spin 1s linear infinite" }}>
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-                Generating PDF...
-              </>
-            ) : saving ? "Sending..." : (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-                Confirm & Download PDF
-              </>
-            )}
+            {saving ? "Sending..." : "Looks good, send to the team →"}
+          </button>
+          <button
+            onClick={downloadPdf}
+            disabled={downloading}
+            style={{
+              background: "white", color: DARK, border: `1.5px solid #E8E8E8`,
+              borderRadius: 12, padding: "14px 24px", fontSize: 14, fontWeight: 500,
+              cursor: downloading ? "wait" : "pointer", fontFamily: "Inter, sans-serif",
+              display: "flex", alignItems: "center", gap: 7, transition: "all 0.2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.color = ACCENT; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#E8E8E8"; e.currentTarget.style.color = DARK; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            {downloading ? "Generating..." : "Download PDF"}
           </button>
         </div>
         <p style={{ fontSize: 12, color: "#B0B0B0", marginTop: 10 }}>
@@ -996,6 +974,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const [isListening, setIsListening] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
   const [interactiveUsed, setInteractiveUsed] = useState<Set<number>>(new Set());
+  const [activeWidgetIndex, setActiveWidgetIndex] = useState<number | null>(null);
   const [contactFormIndex, setContactFormIndex] = useState<number | null>(null);
   const [hiringBrief, setHiringBrief] = useState<HiringBrief | null>(null);
   const [reviewSaving, setReviewSaving] = useState(false);
@@ -1073,6 +1052,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       setSavedMessages(null);
       setInput("");
       setInteractiveUsed(new Set());
+      setActiveWidgetIndex(null);
       setContactFormIndex(null);
       setHiringBrief(null);
       setReviewSaving(false);
@@ -1156,6 +1136,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
     setDetectedEmail(null);
     setRecoveryBarHidden(false);
     setInteractiveUsed(new Set());
+    setActiveWidgetIndex(null);
     setContactFormIndex(null);
     setHiringBrief(null);
     setLiveSpec({});
@@ -1168,15 +1149,11 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
   function continueSession() {
     if (!savedMessages) return;
-    const msgs = savedMessages;
-    setMessages(msgs);
+    setMessages(savedMessages);
     setLatestAiIndex(-1);
+    setActiveWidgetIndex(null);
     setSessionPhase("chat");
     setSavedMessages(null);
-    // Re-extract live spec from restored messages so sidebar repopulates
-    fetchLiveSpec(msgs).then(extracted => {
-      if (Object.keys(extracted).length > 0) setLiveSpec(extracted);
-    }).catch(() => {});
   }
 
   function handleEmailLoad(msgs: Message[]) {
@@ -1209,6 +1186,9 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const sendMessage = useCallback(async (overrideText?: string) => {
     const text = (overrideText ?? input).trim();
     if (!text || loading || complete || sessionPhase === "review") return;
+
+    // Dismiss any active interactive widget the moment the user sends
+    setActiveWidgetIndex(null);
 
     const userMsg: Message = { role: "user", content: text };
     const newMessages = [...messages, userMsg];
@@ -1249,9 +1229,10 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       }
 
       if (reply.includes("INTAKE_COMPLETE")) {
-        // Add final AI message to the conversation
+        // Add final AI message to the conversation — no interactive widget needed
         const finalAIMsg = "Perfect — I've got everything I need. Before I send this to the team, take a moment to review the brief. Edit anything that doesn't look right.";
         setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: finalAIMsg }]; setLatestAiIndex(u.length - 1); return u; });
+        setActiveWidgetIndex(null);
 
         // Parse the brief and transition to review screen
         const parsed = parseIntakeComplete(reply);
@@ -1260,7 +1241,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
           setSessionPhase("review");
         }, 2200);
       } else if (reply.includes("render_component: contact_info_form_bar")) {
-        // Clean signal from displayed text, store cleaned version in messages
+        // Clean signal from displayed text, store cleaned version in messages — contact form handled separately
         const cleanedReply = stripContactFormSignal(reply);
         setMessages(prev => {
           const u = [...prev, { role: "assistant" as const, content: cleanedReply }];
@@ -1268,10 +1249,19 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
           setContactFormIndex(u.length - 1);
           return u;
         });
+        setActiveWidgetIndex(null);
       } else {
-        setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: reply }]; setLatestAiIndex(u.length - 1); return u; });
+        setMessages(prev => {
+          const u = [...prev, { role: "assistant" as const, content: reply }];
+          setLatestAiIndex(u.length - 1);
+          // Only activate a widget if this NEW reply genuinely triggers one
+          const widgetType = detectInteractiveType(reply);
+          setActiveWidgetIndex(widgetType ? u.length - 1 : null);
+          return u;
+        });
       }
     } catch {
+      setActiveWidgetIndex(null);
       setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: "Something went wrong. Try again in a moment." }]; setLatestAiIndex(u.length - 1); return u; });
     } finally {
       setLoading(false);
@@ -1280,6 +1270,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
   const handleInteractiveConfirm = useCallback((messageIndex: number, value: string) => {
     setInteractiveUsed(prev => new Set([...prev, messageIndex]));
+    setActiveWidgetIndex(null);
     sendMessage(value);
   }, [sendMessage]);
 
@@ -1401,15 +1392,13 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
             {/* Content area */}
             <div className="flex-1 overflow-y-auto" style={{ scrollBehavior: "smooth" }}>
 
-              {/* Review screen — full-width, no sidebar */}
+              {/* Review screen (Doc 2) — shown when sessionPhase === "review" */}
               {sessionPhase === "review" && hiringBrief && (
-                <div style={{ maxWidth: 860, margin: "0 auto", width: "100%" }}>
-                  <HiringBriefReview
-                    brief={hiringBrief}
-                    onConfirm={handleBriefConfirm}
-                    saving={reviewSaving}
-                  />
-                </div>
+                <HiringBriefReview
+                  brief={hiringBrief}
+                  onConfirm={handleBriefConfirm}
+                  saving={reviewSaving}
+                />
               )}
 
               {/* Chat area — shown when sessionPhase === "chat" */}
@@ -1449,9 +1438,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
                   <div className="flex flex-col gap-5">
                     {messages.map((msg, i) => {
                       if (msg.role === "assistant") {
-                        const interactiveType = detectInteractiveType(msg.content);
-                        const isLastMsg = i === messages.length - 1;
-                        const shouldShowInteractive = interactiveType && isLastMsg && !interactiveUsed.has(i) && !loading && !complete;
+                        const shouldShowInteractive = i === activeWidgetIndex && !loading && !complete;
                         const shouldShowContactForm = i === contactFormIndex && !interactiveUsed.has(i) && !loading && !complete;
                         return (
                           <div key={i}>
@@ -1481,12 +1468,10 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
               )}
             </div>
 
-            {/* Sidebar — hidden on mobile, toggled by button, hidden during review */}
-            {sessionPhase !== "review" && (
-              <div className="hidden lg:flex">
-                <HiringBriefSidebar spec={spec} hiringBrief={hiringBrief} visible={showSidebar} />
-              </div>
-            )}
+            {/* Sidebar — hidden on mobile, toggled by button */}
+            <div className="hidden lg:flex">
+              <HiringBriefSidebar spec={spec} hiringBrief={hiringBrief} visible={showSidebar} />
+            </div>
           </div>
 
           {/* Input bar — hidden during review or when complete */}

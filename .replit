@@ -57,3 +57,12 @@ author = "user"
 task = "shell.exec"
 args = "cd artifacts/bridgix && pnpm run dev"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Run App"
+author = "user"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/bridgix && pnpm run dev"
+waitForPort = 5000
