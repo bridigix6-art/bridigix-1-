@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import { saveSessionMessages, upsertSessionState, updateSessionStatus } from "../lib/sessionPersistence";
 
 const router = Router();
@@ -55,62 +55,7 @@ At the end, summarize the full brief back to the person for review and let them 
 On the progress indicator
 The completion percentage and "still gathering" list in the sidebar must reflect the real state of [ASK] fields answered, not the count of fields that have any text in them. A field filled by fabrication should not count toward completion. If your output and the progress UI are driven by separate logic, flag this explicitly to engineering — they need to share one source of truth for "answered" vs "filled."
 Persistence requirement
-On reopening a conversation, re-fetch the saved brief state before rendering the sidebar. Never default the sidebar to 0%/empty while the real data loads silently underneath — then populate from the fetched data. The brief shown to the user must always match the brief that will be sent to recruiters.
-Reflection cadence
-On roughly half of turns, move directly to the next question — you may open with at most one short acknowledgment line ("Got it." / "Makes sense." / "Noted."). On the other half, you may recap 1–2 key points the person just gave, but never more than 3–4 lines total. Never use generic filler phrases such as "That's great!", "I appreciate you sharing that", "Thank you for that insight", "Absolutely!", or "Wonderful!" — they waste the user's time and erode trust. If you have nothing specific to say about the answer, skip straight to the next question.
-CLOSING GATE
-You must collect Contact information (Full Name, Work Email, Company Name, Website/Domain) as the FINAL step — after all other [ASK] fields are covered. When Contact is the last remaining field, end your message with exactly this signal on its own line:
-render_component: contact_info_form_bar
-Do not output INTAKE_COMPLETE before receiving the contact form submission. After the contact details are submitted by the user, immediately output the full INTAKE_COMPLETE block below with all 23 fields filled from the conversation. Every field must be populated from what was actually said — use "Not provided" for anything explicitly skipped. Never fabricate.
-INTAKE_COMPLETE
-Company: [value]
-Role Title: [value]
-Hiring Motivation: [value]
-Seniority: [value]
-Reporting Structure: [value]
-Success Metrics: [value]
-Must-Have Skills: [value]
-Nice-to-Have Skills: [value]
-Deal Breakers: [value]
-Work Style: [value]
-Compensation: [value]
-Interview Process: [value]
-Decision Chain: [value]
-Sourcing Preferences: [value]
-Past Hiring Signal: [value]
-Red Flags: [value]
-Timeline: [value]
-Contact Name: [value]
-Contact Email: [value]
-Contact Company: [value]
-Contact Website: [value]
-Candidate Pitch: [value]
-Open Flags: [value]`;
-
-function getGeminiClient() {
-  const apiKey = process.env["GEMINI_API_KEY"];
-  if (!apiKey) return null;
-  return new GoogleGenerativeAI(apiKey);
-}
-
-function handleGeminiError(err: unknown, log: { warn: (o: object, m: string) => void; error: (o: object, m: string) => void }) {
-  const e = err as { message?: string; status?: number; code?: string };
-  const msg = e?.message ?? "";
-  if (msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED") || e?.status === 429) {
-    log.warn({ err }, "Gemini rate limit hit");
-    return { status: 429, body: { error: "rate_limited", message: "The AI is a bit busy right now. Try again in a moment." } };
-  }
-  if (msg.includes("403") || msg.includes("API_KEY_INVALID") || msg.includes("PERMISSION_DENIED") || e?.status === 403) {
-    log.error({ err }, "Gemini auth error — check GEMINI_API_KEY");
-    return { status: 500, body: { error: "AI service authentication failed" } };
-  }
-  if (msg.includes("400") || msg.includes("INVALID_ARGUMENT") || e?.status === 400) {
-    log.error({ err }, "Gemini bad request");
-    return { status: 500, body: { error: "Failed to get AI response" } };
-  }
-  log.error({ err }, "Gemini API error");
-  return { status: 500, body: { error: "Failed to get AI response" } };
-}
+On reopening a conversation, re-fetch the saved brief state before rendering the sidebar. Never default the sidebar to 0%/empty while the real data loads silently underneath — then populate from the fetched data. The brief shown to the user must always match the brief that will be sent to recruiters.`
 
 router.post("/chat", async (req, res) => {
   try {
@@ -142,42 +87,53 @@ router.post("/chat", async (req, res) => {
 
     const typedMessages = messages as Array<{ role: string; content: string }>;
 
-    const genAI = getGeminiClient();
-    if (!genAI) {
-      req.log.error("GEMINI_API_KEY is not set");
+    const apiKey = process.env["GROQ_API_KEY"];
+    if (!apiKey) {
+      req.log.error("GROQ_API_KEY is not set");
       res.status(500).json({ error: "AI service not configured" });
       return;
     }
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      systemInstruction: SYSTEM_PROMPT,
-    });
+    const groq = new Groq({ apiKey });
 
     let reply = "";
     try {
-      const contents = typedMessages.map((m) => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content }],
-      }));
-
-      const result = await model.generateContent({
-        contents,
-        generationConfig: {
-          maxOutputTokens: 2000,
-          temperature: 0.72,
-        },
+      const completion = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          ...typedMessages.map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          })),
+        ],
+        max_tokens: 2000,
+        temperature: 0.72,
       });
 
-      reply = result.response.text();
-    } catch (geminiErr: unknown) {
-      const errResp = handleGeminiError(geminiErr, req.log);
-      res.status(errResp.status).json(errResp.body);
+      reply = completion.choices[0]?.message?.content ?? "";
+    } catch (groqErr: unknown) {
+      const err = groqErr as { status?: number; message?: string };
+      if (err?.status === 429) {
+        req.log.warn({ groqErr }, "Groq rate limit hit");
+        res.status(429).json({
+          error: "rate_limited",
+          message: "The AI is a bit busy right now. Try again in a moment.",
+        });
+        return;
+      }
+      if (err?.status === 401) {
+        req.log.error({ groqErr }, "Groq auth error — check GROQ_API_KEY");
+        res.status(500).json({ error: "AI service authentication failed" });
+        return;
+      }
+      req.log.error({ groqErr }, "Groq API error");
+      res.status(500).json({ error: "Failed to get AI response" });
       return;
     }
 
     if (!reply) {
-      req.log.error("Empty reply from Gemini");
+      req.log.error("Empty reply from Groq");
       res.status(500).json({ error: "Empty response from AI" });
       return;
     }
@@ -252,33 +208,31 @@ router.post("/extract-spec", async (req, res) => {
       return;
     }
 
-    const genAI = getGeminiClient();
-    if (!genAI) {
+    const apiKey = process.env["GROQ_API_KEY"];
+    if (!apiKey) {
       res.json({ spec: {} });
       return;
     }
 
+    const groq = new Groq({ apiKey });
     const typedMessages = messages as Array<{ role: string; content: string }>;
 
     const conversationText = typedMessages
       .map((m) => `${m.role === "user" ? "FOUNDER" : "HIRING PARTNER"}: ${m.content}`)
       .join("\n\n");
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash",
-      systemInstruction: EXTRACT_SPEC_PROMPT,
-    });
-
     let raw = "";
     try {
-      const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: `CONVERSATION:\n${conversationText}` }] }],
-        generationConfig: {
-          maxOutputTokens: 450,
-          temperature: 0.05,
-        },
+      const completion = await groq.chat.completions.create({
+        model: "llama-3.1-8b-instant",
+        messages: [
+          { role: "system", content: EXTRACT_SPEC_PROMPT },
+          { role: "user", content: `CONVERSATION:\n${conversationText}` },
+        ],
+        max_tokens: 450,
+        temperature: 0.05,
       });
-      raw = result.response.text();
+      raw = completion.choices[0]?.message?.content ?? "{}";
     } catch {
       res.json({ spec: {} });
       return;

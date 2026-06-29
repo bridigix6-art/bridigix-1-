@@ -974,7 +974,6 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const [isListening, setIsListening] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
   const [interactiveUsed, setInteractiveUsed] = useState<Set<number>>(new Set());
-  const [activeWidgetIndex, setActiveWidgetIndex] = useState<number | null>(null);
   const [contactFormIndex, setContactFormIndex] = useState<number | null>(null);
   const [hiringBrief, setHiringBrief] = useState<HiringBrief | null>(null);
   const [reviewSaving, setReviewSaving] = useState(false);
@@ -1052,7 +1051,6 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       setSavedMessages(null);
       setInput("");
       setInteractiveUsed(new Set());
-      setActiveWidgetIndex(null);
       setContactFormIndex(null);
       setHiringBrief(null);
       setReviewSaving(false);
@@ -1136,7 +1134,6 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
     setDetectedEmail(null);
     setRecoveryBarHidden(false);
     setInteractiveUsed(new Set());
-    setActiveWidgetIndex(null);
     setContactFormIndex(null);
     setHiringBrief(null);
     setLiveSpec({});
@@ -1151,7 +1148,6 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
     if (!savedMessages) return;
     setMessages(savedMessages);
     setLatestAiIndex(-1);
-    setActiveWidgetIndex(null);
     setSessionPhase("chat");
     setSavedMessages(null);
   }
@@ -1186,9 +1182,6 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const sendMessage = useCallback(async (overrideText?: string) => {
     const text = (overrideText ?? input).trim();
     if (!text || loading || complete || sessionPhase === "review") return;
-
-    // Dismiss any active interactive widget the moment the user sends
-    setActiveWidgetIndex(null);
 
     const userMsg: Message = { role: "user", content: text };
     const newMessages = [...messages, userMsg];
@@ -1229,10 +1222,9 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       }
 
       if (reply.includes("INTAKE_COMPLETE")) {
-        // Add final AI message to the conversation — no interactive widget needed
+        // Add final AI message to the conversation
         const finalAIMsg = "Perfect — I've got everything I need. Before I send this to the team, take a moment to review the brief. Edit anything that doesn't look right.";
         setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: finalAIMsg }]; setLatestAiIndex(u.length - 1); return u; });
-        setActiveWidgetIndex(null);
 
         // Parse the brief and transition to review screen
         const parsed = parseIntakeComplete(reply);
@@ -1241,7 +1233,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
           setSessionPhase("review");
         }, 2200);
       } else if (reply.includes("render_component: contact_info_form_bar")) {
-        // Clean signal from displayed text, store cleaned version in messages — contact form handled separately
+        // Clean signal from displayed text, store cleaned version in messages
         const cleanedReply = stripContactFormSignal(reply);
         setMessages(prev => {
           const u = [...prev, { role: "assistant" as const, content: cleanedReply }];
@@ -1249,19 +1241,10 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
           setContactFormIndex(u.length - 1);
           return u;
         });
-        setActiveWidgetIndex(null);
       } else {
-        setMessages(prev => {
-          const u = [...prev, { role: "assistant" as const, content: reply }];
-          setLatestAiIndex(u.length - 1);
-          // Only activate a widget if this NEW reply genuinely triggers one
-          const widgetType = detectInteractiveType(reply);
-          setActiveWidgetIndex(widgetType ? u.length - 1 : null);
-          return u;
-        });
+        setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: reply }]; setLatestAiIndex(u.length - 1); return u; });
       }
     } catch {
-      setActiveWidgetIndex(null);
       setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: "Something went wrong. Try again in a moment." }]; setLatestAiIndex(u.length - 1); return u; });
     } finally {
       setLoading(false);
@@ -1270,7 +1253,6 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
   const handleInteractiveConfirm = useCallback((messageIndex: number, value: string) => {
     setInteractiveUsed(prev => new Set([...prev, messageIndex]));
-    setActiveWidgetIndex(null);
     sendMessage(value);
   }, [sendMessage]);
 
@@ -1438,8 +1420,9 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
                   <div className="flex flex-col gap-5">
                     {messages.map((msg, i) => {
                       if (msg.role === "assistant") {
-                        const shouldShowInteractive = i === activeWidgetIndex && !loading && !complete;
                         const interactiveType = detectInteractiveType(msg.content);
+                        const isLastMsg = i === messages.length - 1;
+                        const shouldShowInteractive = interactiveType && isLastMsg && !interactiveUsed.has(i) && !loading && !complete;
                         const shouldShowContactForm = i === contactFormIndex && !interactiveUsed.has(i) && !loading && !complete;
                         return (
                           <div key={i}>
