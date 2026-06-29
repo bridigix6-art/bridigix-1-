@@ -10,6 +10,77 @@ env = { "CI" = "true" }
 
 [workflows]
 
+[[workflows.workflow]]
+name = "Run App"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/bridgix && pnpm run dev"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "artifacts/mockup-sandbox: Component Preview Server"
+author = "agent"
+mode = "sequential"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+artifactId = "XegfDyZt7HqfW2Bb8Ghoy"
+isCanvasWorkflow = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/mockup-sandbox run dev"
+cwd = "./artifacts/mockup-sandbox"
+waitForPort = 8081
+ensurePreviewReachable = "/"
+router = "path"
+
+[workflows.workflow.tasks.env]
+PORT = "8081"
+BASE_PATH = "/__mockup"
+
+[[workflows.workflow]]
+name = "artifacts/bridgix: web"
+author = "agent"
+mode = "sequential"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+artifactId = "artifacts/bridgix"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/bridgix run dev"
+cwd = "./artifacts/bridgix"
+waitForPort = 20154
+ensurePreviewReachable = "/"
+router = "path"
+
+[workflows.workflow.tasks.env]
+PORT = "20154"
+BASE_PATH = "/"
+
+[[workflows.workflow]]
+name = "artifacts/api-server: API Server"
+author = "agent"
+mode = "sequential"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+artifactId = "3B4_FFSkEVBkAeYMFRJ2e"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/api-server run dev"
+cwd = "./artifacts/api-server"
+waitForPort = 8080
+ensurePreviewReachable = "/"
+router = "path"
+
+[workflows.workflow.tasks.env]
+PORT = "8080"
+
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
@@ -48,21 +119,3 @@ BASE_PATH = "/"
 
 [nix]
 channel = "stable-25_05"
-
-[[workflows.workflow]]
-name = "Run App"
-author = "user"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd artifacts/bridgix && pnpm run dev"
-waitForPort = 5000
-
-[[workflows.workflow]]
-name = "Run App"
-author = "user"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd artifacts/bridgix && pnpm run dev"
-waitForPort = 5000
