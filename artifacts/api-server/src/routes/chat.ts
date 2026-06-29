@@ -37,10 +37,13 @@ async function callGemini({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: systemPrompt }] }, ...messages.map((message) => ({
-          role: message.role === "assistant" ? "model" : "user",
-          parts: [{ text: message.content }],
-        }))],
+        contents: [
+          { role: "system", parts: [{ text: systemPrompt }] },
+          ...messages.map((message) => ({
+            role: message.role === "assistant" ? "model" : "user",
+            parts: [{ text: message.content }],
+          })),
+        ],
         generationConfig: {
           maxOutputTokens,
           temperature,
@@ -156,7 +159,7 @@ router.post("/chat", async (req, res) => {
     let reply = "";
     try {
       reply = await callGemini({
-        model: "gemini-3.1-flash-lite",
+        model: "gemini-3.5-flash",
         systemPrompt: SYSTEM_PROMPT,
         messages: typedMessages.map((m) => ({
           role: m.role as "user" | "assistant",
