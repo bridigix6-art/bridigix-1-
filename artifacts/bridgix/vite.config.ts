@@ -63,12 +63,15 @@ export default defineConfig({
     strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
+<<<<<<< HEAD
     proxy: {
   "/api": {
     target: "http://localhost:8080",
     changeOrigin: true,
   },
 }, 
+=======
+>>>>>>> 3612ec95bb2e3e64105e6049a8bdee8baf6ddee5
     fs: {
       strict: true,
     },
