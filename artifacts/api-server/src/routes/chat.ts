@@ -1,8 +1,74 @@
 import { Router } from "express";
-import Groq from "groq-sdk";
 import { saveSessionMessages, upsertSessionState, updateSessionStatus } from "../lib/sessionPersistence";
 
 const router = Router();
+
+class GeminiApiError extends Error {
+  status?: number;
+
+  constructor(status: number | undefined, message: string) {
+    super(message);
+    this.name = "GeminiApiError";
+    this.status = status;
+  }
+}
+
+async function callGemini({
+  model,
+  systemPrompt,
+  messages,
+  maxOutputTokens,
+  temperature,
+}: {
+  model: string;
+  systemPrompt: string;
+  messages: Array<{ role: string; content: string }>;
+  maxOutputTokens: number;
+  temperature: number;
+}): Promise<string> {
+  const apiKey = process.env["GEMINI_API_KEY"];
+  if (!apiKey) {
+    throw new GeminiApiError(500, "GEMINI_API_KEY is not set");
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: systemPrompt }] }, ...messages.map((message) => ({
+          role: message.role === "assistant" ? "model" : "user",
+          parts: [{ text: message.content }],
+        }))],
+        generationConfig: {
+          maxOutputTokens,
+          temperature,
+        },
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    let detail = "";
+    try {
+      detail = await response.text();
+    } catch {
+      detail = "Unable to read Gemini error response";
+    }
+    throw new GeminiApiError(response.status, detail || `Gemini API error ${response.status}`);
+  }
+
+  const data = (await response.json()) as {
+    candidates?: Array<{
+      content?: {
+        parts?: Array<{ text?: string }>;
+      };
+    }>;
+  };
+
+  return data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+}
 
 const SYSTEM_PROMPT = `Bridgix Hiring Partner — System Prompt
 Role
@@ -87,35 +153,22 @@ router.post("/chat", async (req, res) => {
 
     const typedMessages = messages as Array<{ role: string; content: string }>;
 
-    const apiKey = process.env["GROQ_API_KEY"];
-    if (!apiKey) {
-      req.log.error("GROQ_API_KEY is not set");
-      res.status(500).json({ error: "AI service not configured" });
-      return;
-    }
-
-    const groq = new Groq({ apiKey });
-
     let reply = "";
     try {
-      const completion = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          ...typedMessages.map((m) => ({
-            role: m.role as "user" | "assistant",
-            content: m.content,
-          })),
-        ],
-        max_tokens: 2000,
+      reply = await callGemini({
+        model: "gemini-3.1-flash-lite",
+        systemPrompt: SYSTEM_PROMPT,
+        messages: typedMessages.map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        })),
+        maxOutputTokens: 2000,
         temperature: 0.72,
       });
-
-      reply = completion.choices[0]?.message?.content ?? "";
-    } catch (groqErr: unknown) {
-      const err = groqErr as { status?: number; message?: string };
+    } catch (geminiErr: unknown) {
+      const err = geminiErr as { status?: number; message?: string };
       if (err?.status === 429) {
-        req.log.warn({ groqErr }, "Groq rate limit hit");
+        req.log.warn({ geminiErr }, "Gemini rate limit hit");
         res.status(429).json({
           error: "rate_limited",
           message: "The AI is a bit busy right now. Try again in a moment.",
@@ -123,17 +176,17 @@ router.post("/chat", async (req, res) => {
         return;
       }
       if (err?.status === 401) {
-        req.log.error({ groqErr }, "Groq auth error — check GROQ_API_KEY");
+        req.log.error({ geminiErr }, "Gemini auth error — check GEMINI_API_KEY");
         res.status(500).json({ error: "AI service authentication failed" });
         return;
       }
-      req.log.error({ groqErr }, "Groq API error");
+      req.log.error({ geminiErr }, "Gemini API error");
       res.status(500).json({ error: "Failed to get AI response" });
       return;
     }
 
     if (!reply) {
-      req.log.error("Empty reply from Groq");
+      req.log.error("Empty reply from Gemini");
       res.status(500).json({ error: "Empty response from AI" });
       return;
     }
@@ -208,13 +261,6 @@ router.post("/extract-spec", async (req, res) => {
       return;
     }
 
-    const apiKey = process.env["GROQ_API_KEY"];
-    if (!apiKey) {
-      res.json({ spec: {} });
-      return;
-    }
-
-    const groq = new Groq({ apiKey });
     const typedMessages = messages as Array<{ role: string; content: string }>;
 
     const conversationText = typedMessages
@@ -223,20 +269,19 @@ router.post("/extract-spec", async (req, res) => {
 
     let raw = "";
     try {
-      const completion = await groq.chat.completions.create({
-        model: "llama-3.1-8b-instant",
-        messages: [
-          { role: "system", content: EXTRACT_SPEC_PROMPT },
-          { role: "user", content: `CONVERSATION:\n${conversationText}` },
-        ],
-        max_tokens: 450,
+      raw = await callGemini({
+        model: "gemini-3.1-flash-lite",
+        systemPrompt: EXTRACT_SPEC_PROMPT,
+        messages: [{ role: "user", content: `CONVERSATION:\n${conversationText}` }],
+        maxOutputTokens: 450,
         temperature: 0.05,
       });
-      raw = completion.choices[0]?.message?.content ?? "{}";
     } catch {
       res.json({ spec: {} });
       return;
     }
+
+    raw = raw || "{}";
 
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     const jsonStr = jsonMatch ? jsonMatch[0] : "{}";
