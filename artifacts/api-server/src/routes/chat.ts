@@ -1,19 +1,36 @@
 import { Router } from "express";
+import { OpenRouter } from "@openrouter/sdk";
 import { saveSessionMessages, upsertSessionState, updateSessionStatus } from "../lib/sessionPersistence";
 
 const router = Router();
 
-class GeminiApiError extends Error {
+class OpenRouterApiError extends Error {
   status?: number;
 
   constructor(status: number | undefined, message: string) {
     super(message);
-    this.name = "GeminiApiError";
+    this.name = "OpenRouterApiError";
     this.status = status;
   }
 }
 
-async function callGemini({
+type OpenRouterMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
+const OPENROUTER_STREAM_PREFIX = "data:";
+
+function getOpenRouterClient() {
+  const apiKey = process.env["OPENROUTER_API_KEY"]?.trim();
+  if (!apiKey) {
+    throw new OpenRouterApiError(500, "OPENROUTER_API_KEY is not set");
+  }
+
+  return new OpenRouter({ apiKey });
+}
+
+async function callOpenRouter({
   model,
   systemPrompt,
   messages,
@@ -26,51 +43,102 @@ async function callGemini({
   maxOutputTokens: number;
   temperature: number;
 }): Promise<string> {
-  const apiKey = process.env["GEMINI_API_KEY"];
-  if (!apiKey) {
-    throw new GeminiApiError(500, "GEMINI_API_KEY is not set");
-  }
+  const client = getOpenRouterClient();
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          { role: "system", parts: [{ text: systemPrompt }] },
-          ...messages.map((message) => ({
-            role: message.role === "assistant" ? "model" : "user",
-            parts: [{ text: message.content }],
-          })),
-        ],
-        generationConfig: {
-          maxOutputTokens,
-          temperature,
-        },
-      }),
-    },
-  );
+  const requestMessages: OpenRouterMessage[] = [
+    { role: "system", content: systemPrompt },
+    ...messages
+      .filter((m) => m.role === "assistant" || m.role === "user")
+      .map((m): OpenRouterMessage => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: m.content,
+      })),
+  ];
 
-  if (!response.ok) {
-    let detail = "";
-    try {
-      detail = await response.text();
-    } catch {
-      detail = "Unable to read Gemini error response";
+  try {
+    const response = await client.chat.send({
+      chatRequest: {
+        model,
+        messages: requestMessages,
+        maxTokens: maxOutputTokens,
+        temperature,
+      },
+      httpReferer: "https://bridigix.ai",
+      appTitle: "Bridigix Intake",
+    });
+
+    if (response && typeof response === "object" && "body" in response) {
+      const stream = response.body as ReadableStream<Uint8Array> | null | undefined;
+      if (stream) {
+        const reader = stream.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let streamText = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value);
+
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() ?? "";
+
+          for (const part of parts) {
+            const dataLine = part
+              .split("\n")
+              .map((line) => line.trim())
+              .find((line) => line.startsWith(OPENROUTER_STREAM_PREFIX));
+
+            if (!dataLine) continue;
+
+            const payload = dataLine.slice(OPENROUTER_STREAM_PREFIX.length).trim();
+            if (!payload || payload === "[DONE]") continue;
+
+            try {
+              const parsed = JSON.parse(payload) as {
+                choices?: Array<{ delta?: { content?: string | null } }>;
+              };
+              const deltaContent = parsed.choices?.[0]?.delta?.content;
+              if (typeof deltaContent === "string") {
+                streamText += deltaContent;
+              }
+            } catch {
+              // Ignore malformed streaming events and continue.
+            }
+          }
+        }
+
+        if (!streamText) {
+          throw new OpenRouterApiError(502, "OpenRouter returned an empty response");
+        }
+
+        return streamText;
+      }
     }
-    throw new GeminiApiError(response.status, detail || `Gemini API error ${response.status}`);
+
+    const text =
+      typeof response === "object" && response && "choices" in response && Array.isArray((response as { choices?: Array<{ message?: { content?: string | null } }> }).choices)
+        ? (response as { choices?: Array<{ message?: { content?: string | null } }> }).choices
+            ?.map((choice) => choice?.message?.content ?? "")
+            .join("") ?? ""
+        : "";
+
+    if (!text) {
+      throw new OpenRouterApiError(502, "OpenRouter returned an empty response");
+    }
+
+    return text;
+  } catch (err) {
+    if (err instanceof OpenRouterApiError) {
+      throw err;
+    }
+
+    const status = typeof err === "object" && err && "statusCode" in err ? Number((err as { statusCode?: number }).statusCode) : undefined;
+    const message = typeof err === "object" && err && "message" in err ? String((err as { message?: string }).message) : "OpenRouter request failed";
+    const apiErr = new OpenRouterApiError(status, message);
+    console.error("OPENROUTER_MIGRATION_ERROR:", apiErr);
+    throw apiErr;
   }
-
-  const data = (await response.json()) as {
-    candidates?: Array<{
-      content?: {
-        parts?: Array<{ text?: string }>;
-      };
-    }>;
-  };
-
-  return data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
 }
 
 const SYSTEM_PROMPT = `Bridgix Hiring Partner — System Prompt
@@ -158,8 +226,8 @@ router.post("/chat", async (req, res) => {
 
     let reply = "";
     try {
-      reply = await callGemini({
-        model: "gemini-3.5-flash",
+      reply = await callOpenRouter({
+        model: "deepseek/deepseek-v4-flash",
         systemPrompt: SYSTEM_PROMPT,
         messages: typedMessages.map((m) => ({
           role: m.role as "user" | "assistant",
@@ -168,10 +236,10 @@ router.post("/chat", async (req, res) => {
         maxOutputTokens: 2000,
         temperature: 0.72,
       });
-    } catch (geminiErr: unknown) {
-      const err = geminiErr as { status?: number; message?: string };
+    } catch (openRouterErr: unknown) {
+      const err = openRouterErr as { status?: number; message?: string };
       if (err?.status === 429) {
-        req.log.warn({ geminiErr }, "Gemini rate limit hit");
+        req.log.warn({ openRouterErr }, "OpenRouter rate limit hit");
         res.status(429).json({
           error: "rate_limited",
           message: "The AI is a bit busy right now. Try again in a moment.",
@@ -179,17 +247,17 @@ router.post("/chat", async (req, res) => {
         return;
       }
       if (err?.status === 401) {
-        req.log.error({ geminiErr }, "Gemini auth error — check GEMINI_API_KEY");
+        req.log.error({ openRouterErr }, "OpenRouter auth error — check OPENROUTER_API_KEY");
         res.status(500).json({ error: "AI service authentication failed" });
         return;
       }
-      req.log.error({ geminiErr }, "Gemini API error");
+      req.log.error({ openRouterErr }, "OpenRouter API error");
       res.status(500).json({ error: "Failed to get AI response" });
       return;
     }
 
     if (!reply) {
-      req.log.error("Empty reply from Gemini");
+      req.log.error("Empty reply from OpenRouter");
       res.status(500).json({ error: "Empty response from AI" });
       return;
     }
@@ -272,8 +340,8 @@ router.post("/extract-spec", async (req, res) => {
 
     let raw = "";
     try {
-      raw = await callGemini({
-        model: "gemini-3.1-flash-lite",
+      raw = await callOpenRouter({
+        model: "deepseek/deepseek-v4-flash",
         systemPrompt: EXTRACT_SPEC_PROMPT,
         messages: [{ role: "user", content: `CONVERSATION:\n${conversationText}` }],
         maxOutputTokens: 450,

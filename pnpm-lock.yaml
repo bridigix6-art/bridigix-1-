@@ -169,6 +169,9 @@ importers:
       '@google/generative-ai':
         specifier: ^0.24.1
         version: 0.24.1
+      '@openrouter/sdk':
+        specifier: 0.13.21
+        version: 0.13.21
       '@supabase/supabase-js':
         specifier: ^2.107.0
         version: 2.107.0
@@ -839,6 +842,9 @@ packages:
   '@nodelib/fs.walk@1.2.8':
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
+
+  '@openrouter/sdk@0.13.21':
+    resolution: {integrity: sha512-kxr2hS5vViUFreQidnqVJni/StEJBnps6xPhW7Bvbjul99gt6CpJHJDQsW8BZzShESQsplES1Re7XIFoj9t8mw==}
 
   '@orval/angular@8.9.1':
     resolution: {integrity: sha512-S4OVIfyCO+lvNQ52tY6OnisYCYK71XiGKvSEP83I38YvQTKkkm1wJvkM5GC5Q9Evthqg169Qo59xSEiXFAftyw==}
@@ -3572,6 +3578,10 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
+
+  '@openrouter/sdk@0.13.21':
+    dependencies:
+      zod: 3.25.76
 
   '@orval/angular@8.9.1(typescript@5.9.3)':
     dependencies:
