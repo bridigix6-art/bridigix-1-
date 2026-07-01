@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { supabase, supabaseAdmin } from "../lib/supabase";
 import { pool } from "@workspace/db";
 
@@ -137,7 +137,7 @@ router.post("/admin/setup-db", checkAuth, async (req, res) => {
       body: JSON.stringify({ query: sql }),
     });
 
-    const body = await result.json().catch(() => ({}));
+    const body = await (result as any).json().catch(() => ({}));
     res.json({ ok: result.ok, status: result.status, body });
   } catch (err) {
     res.status(500).json({ error: "Setup failed" });
