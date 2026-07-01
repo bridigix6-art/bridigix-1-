@@ -10,7 +10,6 @@
     "noImplicitOverride": false,
     "noImplicitReturns": true,
     "noUnusedLocals": false,
-    "noImplicitAny": true,
     "noImplicitThis": true,
     "strictNullChecks": true,
     "strictFunctionTypes": false,
