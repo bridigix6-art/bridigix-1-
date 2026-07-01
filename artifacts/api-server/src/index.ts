@@ -16,10 +16,38 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-// Ensure completed_intakes table exists on startup using the shared db pool
-async function ensureCompletedIntakesTable() {
+async function ensureSessionSchema() {
   try {
     await pool.query(`
+      CREATE EXTENSION IF NOT EXISTS pgcrypto;
+      CREATE TABLE IF NOT EXISTS sessions (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+        status TEXT DEFAULT 'in_progress' NOT NULL,
+        export_count INTEGER DEFAULT 0 NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS session_state (
+        session_id TEXT PRIMARY KEY NOT NULL,
+        state JSONB DEFAULT '{}'::JSONB NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id BIGSERIAL PRIMARY KEY NOT NULL,
+        session_id TEXT NOT NULL,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS session_exports (
+        id BIGSERIAL PRIMARY KEY NOT NULL,
+        session_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        storage_path TEXT NOT NULL,
+        file_size_bytes INTEGER NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+        CONSTRAINT session_exports_session_id_version_unique UNIQUE (session_id, version)
+      );
       CREATE TABLE IF NOT EXISTS completed_intakes (
         id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
         session_id TEXT UNIQUE,
@@ -32,12 +60,52 @@ async function ensureCompletedIntakesTable() {
       );
       CREATE INDEX IF NOT EXISTS completed_intakes_email_idx ON completed_intakes(email);
       CREATE INDEX IF NOT EXISTS completed_intakes_session_idx ON completed_intakes(session_id);
+      CREATE INDEX IF NOT EXISTS chat_messages_session_id_idx ON chat_messages(session_id);
+      CREATE INDEX IF NOT EXISTS session_exports_session_id_idx ON session_exports(session_id);
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'sessions' AND column_name = 'id' AND data_type = 'uuid'
+        ) THEN
+          ALTER TABLE session_state DROP CONSTRAINT IF EXISTS session_state_session_id_sessions_id_fk;
+          ALTER TABLE chat_messages DROP CONSTRAINT IF EXISTS chat_messages_session_id_sessions_id_fk;
+          ALTER TABLE session_exports DROP CONSTRAINT IF EXISTS session_exports_session_id_sessions_id_fk;
+          ALTER TABLE sessions ALTER COLUMN id TYPE TEXT;
+          ALTER TABLE session_state ALTER COLUMN session_id TYPE TEXT;
+          ALTER TABLE chat_messages ALTER COLUMN session_id TYPE TEXT;
+          ALTER TABLE session_exports ALTER COLUMN session_id TYPE TEXT;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'session_state_session_id_sessions_id_fk'
+        ) THEN
+          ALTER TABLE session_state
+            ADD CONSTRAINT session_state_session_id_sessions_id_fk
+            FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'chat_messages_session_id_sessions_id_fk'
+        ) THEN
+          ALTER TABLE chat_messages
+            ADD CONSTRAINT chat_messages_session_id_sessions_id_fk
+            FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'session_exports_session_id_sessions_id_fk'
+        ) THEN
+          ALTER TABLE session_exports
+            ADD CONSTRAINT session_exports_session_id_sessions_id_fk
+            FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE;
+        END IF;
+      END $$;
     `);
-    // Notify PostgREST to reload its schema cache so the new table is visible
     await pool.query(`NOTIFY pgrst, 'reload schema'`);
-    logger.info("completed_intakes table ready");
+    logger.info("session schema ready");
   } catch (err) {
-    logger.warn({ err }, "Could not ensure completed_intakes table (may already exist or no access)");
+    logger.warn({ err }, "Could not ensure session schema (may already exist or no access)");
   }
 }
 
@@ -48,5 +116,5 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
-  ensureCompletedIntakesTable().catch(() => {});
+  ensureSessionSchema().catch(() => {});
 });
