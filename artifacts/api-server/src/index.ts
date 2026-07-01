@@ -2,19 +2,14 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
 
-const rawPort = process.env["PORT"];
-
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
-
+const rawPort = process.env["PORT"] ?? "8080";
 const port = Number(rawPort);
 
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
+
+const host = process.env["HOST"] ?? "0.0.0.0";
 
 async function ensureSessionSchema() {
   try {
@@ -109,12 +104,12 @@ async function ensureSessionSchema() {
   }
 }
 
-app.listen(port, (err) => {
+app.listen(port, host, (err) => {
   if (err) {
-    logger.error({ err }, "Error listening on port");
+    logger.error({ err, host, port }, "Error listening on port");
     process.exit(1);
   }
 
-  logger.info({ port }, "Server listening");
+  logger.info({ host, port }, "Server listening");
   ensureSessionSchema().catch(() => {});
 });
