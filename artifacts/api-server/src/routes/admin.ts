@@ -1,4 +1,4 @@
-import { Router, type Request, type Response, type NextFunction } from "express";
+import { Router, Request, Response } from "express";
 import { supabase, supabaseAdmin } from "../lib/supabase";
 import { pool } from "@workspace/db";
 
