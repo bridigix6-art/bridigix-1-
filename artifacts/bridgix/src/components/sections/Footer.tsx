@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import logoImage from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
+import { apiEndpoint } from "@/lib/api";
 
 export function Footer() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -13,7 +14,7 @@ export function Footer() {
     if (!email.trim() || submitting) return;
     setSubmitting(true);
     try {
-      const res = await fetch("/api/subscribe", {
+      const res = await fetch(apiEndpoint("/api/subscribe"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim() }),

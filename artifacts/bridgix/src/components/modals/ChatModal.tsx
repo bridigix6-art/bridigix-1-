@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import logoImage from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
+import { apiEndpoint } from "@/lib/api";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -183,7 +184,7 @@ function parseIntakeComplete(text: string): HiringBrief {
 
 async function fetchLiveSpec(messages: Message[]): Promise<CandidateSpec> {
   try {
-    const res = await fetch("/api/extract-spec", {
+    const res = await fetch(apiEndpoint("/api/extract-spec"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messages }),
@@ -706,7 +707,7 @@ function HiringBriefReview({
     if (downloading) return;
     setDownloading(true);
     try {
-      const res = await fetch("/api/generate-pdf", {
+      const res = await fetch(apiEndpoint("/api/generate-pdf"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ brief: editing }),
@@ -898,7 +899,7 @@ function RecoveryBar({ onLoad, hidden }: { onLoad: (msgs: Message[]) => void; hi
     if (!trimmed) return;
     setState("loading");
     try {
-      const res = await fetch(`/api/load-chat?email=${encodeURIComponent(trimmed)}`);
+      const res = await fetch(apiEndpoint(`/api/load-chat?email=${encodeURIComponent(trimmed)}`));
       const data = await res.json() as { found?: boolean; messages?: Message[]; intakeSummary?: string };
       if (data.found && data.messages && data.messages.length > 0) {
         if (data.intakeSummary) {
@@ -1068,7 +1069,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
     // Track visitor session on modal open
     const tz = getOrSetTimezone();
-    fetch("/api/track-session", {
+    fetch(apiEndpoint("/api/track-session"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ timezone: tz }),
@@ -1076,7 +1077,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
     const loadSession = async () => {
       try {
-        const res = await fetch(`/api/load-session?sessionId=${encodeURIComponent(sessionId)}`);
+        const res = await fetch(apiEndpoint(`/api/load-session?sessionId=${encodeURIComponent(sessionId)}`));
         if (!res.ok) {
           startFresh();
           return;
@@ -1120,7 +1121,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   // Save to DB via save-chat on every message update
   useEffect(() => {
     if (messages.length === 0 || sessionPhase !== "chat") return;
-    fetch("/api/save-chat", {
+    fetch(apiEndpoint("/api/save-chat"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: detectedEmail ?? undefined, messages, sessionId }),
@@ -1162,7 +1163,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   async function handleBriefConfirm(edited: HiringBrief) {
     setReviewSaving(true);
     try {
-      await fetch("/api/save-hiring-brief", {
+      await fetch(apiEndpoint("/api/save-hiring-brief"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1191,7 +1192,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
     if (textareaRef.current) textareaRef.current.style.height = "56px";
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch(apiEndpoint("/api/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

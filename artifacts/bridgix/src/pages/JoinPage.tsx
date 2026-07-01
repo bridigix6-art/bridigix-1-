@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navigation } from "@/components/sections/Navigation";
 import { useLocation } from "wouter";
+import { apiEndpoint } from "@/lib/api";
 
 const ROLES = [
   "Select your primary role",
@@ -469,7 +470,7 @@ export default function JoinPage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch("/api/save-application", {
+      const res = await fetch(apiEndpoint("/api/save-application"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
