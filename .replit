@@ -16,7 +16,11 @@ name = "Run App"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd artifacts/bridgix && pnpm run dev"
-waitForPort = 5000
+waitForPort = 20154
+
+[workflows.workflow.tasks.env]
+PORT = "20154"
+BASE_PATH = "/"
 
 [[workflows.workflow]]
 name = "artifacts/mockup-sandbox: Component Preview Server"
@@ -75,11 +79,15 @@ task = "shell.exec"
 args = "pnpm --filter @workspace/api-server run dev"
 cwd = "./artifacts/api-server"
 waitForPort = 8080
-ensurePreviewReachable = "/"
+ensurePreviewReachable = "/api/health"
 router = "path"
 
 [workflows.workflow.tasks.env]
 PORT = "8080"
+DATABASE_URL = "postgresql://postgres:bridigix@127.0.0.1:5432/bridigix"
+OPENROUTER_API_KEY = "${OPENROUTER_API_KEY}"
+SUPABASE_URL = "https://vtgbivniyrrmtyyczvjn.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2Jpdm5peXJybXR5eWN6dmpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NjE2OTQsImV4cCI6MjA5NzQzNzY5NH0.pyrT_F3Wf01DGmauxhP2hbSpS7LHpKxUq3LqQOFVbi8"
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
