@@ -1,6 +1,6 @@
 import express, { type Express, Request, Response } from "express";
 import cors from "cors";
-import { pinoHttp } from "pino-http";
+import pinoHttp from "pino-http";
 import { HealthCheckResponse } from "@workspace/api-zod";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -8,7 +8,7 @@ import { logger } from "./lib/logger";
 const app: Express = express();
 
 app.use(
-  pinoHttp({
+  (pinoHttp as any)({
     logger,
         serializers: {
       req(req: any) { // <-- Add ': any' here
@@ -24,6 +24,8 @@ app.use(
         };
       },
     },
+  }),
+  );
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
