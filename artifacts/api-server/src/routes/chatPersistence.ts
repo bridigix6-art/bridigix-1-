@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { supabase } from "../lib/supabase";
+import { supabase, supabaseAdmin, ensureRecruiterIntakeTable } from "../lib/supabase";
 import {
   saveSessionMessages,
   upsertSessionState,
@@ -9,6 +9,79 @@ import {
 } from "../lib/sessionPersistence";
 
 const router = Router();
+
+function parseOptionalString(value: unknown): string | null {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return null;
+}
+
+function parseOptionalNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function parseBoolean(value: unknown): boolean | null {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "yes", "1", "on"].includes(normalized)) {
+      return true;
+    }
+    if (["false", "no", "0", "off"].includes(normalized)) {
+      return false;
+    }
+  }
+  return null;
+}
+
+function buildRecruiterIntakeRow(payload: Record<string, unknown>) {
+  const contactEmail = parseOptionalString(payload.contactEmail ?? payload.email);
+  const contactName = parseOptionalString(payload.contactName ?? payload.name);
+
+  return {
+    contact_name: contactName,
+    contact_email: contactEmail?.toLowerCase() ?? null,
+    company_name: parseOptionalString(payload.companyName),
+    company_website: parseOptionalString(payload.companyWebsite),
+    job_title: parseOptionalString(payload.jobTitle),
+    employment_type: parseOptionalString(payload.employmentType),
+    location_type: parseOptionalString(payload.locationType),
+    location_city: parseOptionalString(payload.locationCity),
+    role_description: parseOptionalString(payload.roleDescription),
+    responsibilities: parseOptionalString(payload.responsibilities),
+    required_skills: parseOptionalString(payload.requiredSkills),
+    nice_to_have_skills: parseOptionalString(payload.niceToHaveSkills),
+    experience: parseOptionalString(payload.experience),
+    seniority: parseOptionalString(payload.seniority),
+    headcount: parseOptionalString(payload.headcount),
+    urgency: parseOptionalString(payload.urgency),
+    salary_min: parseOptionalNumber(payload.salaryMin),
+    salary_max: parseOptionalNumber(payload.salaryMax),
+    keep_salary_confidential: parseBoolean(payload.keepSalaryConfidential) ?? false,
+    interview_rounds: parseOptionalString(payload.interviewRounds),
+    red_flags: parseOptionalString(payload.redFlags),
+    culture: parseOptionalString(payload.culture),
+    visa_sponsorship: parseOptionalString(payload.visaSponsorship),
+    referral_bonus: parseOptionalString(payload.referralBonus),
+    source: "bridgix_recruiter_form",
+    submission_payload: payload,
+    submitted_at: new Date().toISOString(),
+  };
+}
 
 // ─── Save chat to session-backed tables ───────────────────────────────────
 router.post("/save-chat", async (req, res) => {
@@ -222,7 +295,82 @@ router.post("/track-session", async (req, res) => {
   }
 });
 
-// ─── Save application ─────────────────────────────────────────────────────────
+// ─── Save recruiter intake ─────────────────────────────────────────────────
+router.post("/recruiter-intake", async (req, res) => {
+  try {
+    const payload = (req.body ?? {}) as Record<string, unknown>;
+    req.log.info({ payload }, "Recruiter intake submission received");
+
+    const normalized = buildRecruiterIntakeRow(payload);
+
+    if (!normalized.contact_name?.trim() || !normalized.contact_email?.trim() || !normalized.company_name?.trim()) {
+      res.status(400).json({ error: "contact name, email, and company are required" });
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized.contact_email)) {
+      res.status(400).json({ error: "Invalid email address" });
+      return;
+    }
+
+    await ensureRecruiterIntakeTable();
+
+    const { error } = await supabaseAdmin.from("recruiter_intakes").insert(normalized);
+
+    if (error) {
+      const canFallback = error.code === "PGRST205" || error.message?.includes("Could not find the table") || error.message?.includes("does not exist");
+
+      if (!canFallback) {
+        req.log.error({ error }, "Supabase recruiter-intake insert error");
+        res.status(500).json({ error: "Failed to submit recruiter intake" });
+        return;
+      }
+
+      const { error: fallbackError } = await supabase.from("join_applications").insert({
+        name: normalized.contact_name ?? "Recruiter Intake",
+        email: normalized.contact_email ?? null,
+        location: normalized.location_city ?? normalized.location_type ?? null,
+        role: normalized.job_title ?? null,
+        other_role: normalized.employment_type ?? null,
+        experience: normalized.experience ?? null,
+        skills: normalized.required_skills ? normalized.required_skills.split(/,\s*/).filter(Boolean) : [],
+        github: null,
+        linkedin: null,
+        project: normalized.role_description ?? null,
+        environment: normalized.location_type ?? null,
+        status: "recruiter_intake",
+        availability: normalized.urgency ?? null,
+        work_type: normalized.employment_type ? [normalized.employment_type] : [],
+        salary: normalized.salary_min || normalized.salary_max ? `${normalized.salary_min ?? ""}-${normalized.salary_max ?? ""}`.replace(/-$/, "") : null,
+        notes: JSON.stringify({
+          company_name: normalized.company_name,
+          company_website: normalized.company_website,
+          responsibilities: normalized.responsibilities,
+          nice_to_have_skills: normalized.nice_to_have_skills,
+          interview_rounds: normalized.interview_rounds,
+          red_flags: normalized.red_flags,
+          culture: normalized.culture,
+          visa_sponsorship: normalized.visa_sponsorship,
+          referral_bonus: normalized.referral_bonus,
+          source: normalized.source,
+        }),
+        ip_address: (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || null,
+      });
+
+      if (fallbackError) {
+        req.log.error({ fallbackError }, "Supabase fallback insert error");
+        res.status(500).json({ error: "Failed to submit recruiter intake" });
+        return;
+      }
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Unexpected recruiter-intake error");
+    res.status(500).json({ error: "Failed to submit recruiter intake" });
+  }
+});
+
 router.post("/save-application", async (req, res) => {
   try {
     const { name, email, formData } = req.body as {
