@@ -1,5 +1,19 @@
 import { pool } from "@workspace/db";
 
+type SessionRow = {
+  status?: string | null;
+  export_count?: number | string | null;
+};
+
+type SessionStateRow = {
+  state?: Record<string, unknown> | null;
+};
+
+type ChatMessageRow = {
+  role?: string | null;
+  content?: string | null;
+};
+
 export interface ChatMessagePayload {
   role: string;
   content: string;
@@ -108,7 +122,7 @@ export async function updateSessionStatus(
 export async function loadSession(
   sessionId: string,
 ): Promise<LoadedSession | null> {
-  const sessionResult = await pool.query(
+  const sessionResult = await pool.query<SessionRow>(
     `SELECT status, export_count FROM sessions WHERE id = $1`,
     [sessionId],
   );
@@ -129,7 +143,7 @@ export async function loadSession(
 
   return {
     sessionId,
-    status: sessionRow.status,
+    status: sessionRow.status ?? "in_progress",
     exportCount: Number(sessionRow.export_count ?? 0),
     state: stateResult.rows[0]?.state ?? null,
     messages: messagesResult.rows.map((row: { role: string; content: string }) => ({
