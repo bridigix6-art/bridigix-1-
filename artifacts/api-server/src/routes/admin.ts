@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from "express";
+import { Router, type Request as ExpressRequest, type Response as ExpressResponse, type NextFunction as ExpressNextFunction } from "express";
 import { supabase, supabaseAdmin } from "../lib/supabase";
 import { pool } from "@workspace/db";
 
@@ -10,7 +10,7 @@ if (!ADMIN_PASSWORD) {
   throw new Error("ADMIN_PASSWORD must be set before starting the admin API.");
 }
 
-function checkAuth(req: Request, res: Response, next: NextFunction) {
+function checkAuth(req: ExpressRequest, res: ExpressResponse, next: ExpressNextFunction) {
   const auth = req.headers["x-admin-password"];
   if (auth !== ADMIN_PASSWORD) {
     res.status(401).json({ error: "Unauthorized" });
