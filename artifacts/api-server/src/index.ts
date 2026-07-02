@@ -5,6 +5,10 @@ import { pool } from "@workspace/db";
 const rawPort = process.env["PORT"] ?? "8080";
 const port = Number(rawPort);
 
+if (!process.env["OPENROUTER_API_KEY"]?.trim()) {
+  throw new Error("OPENROUTER_API_KEY must be set before starting the API server.");
+}
+
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
@@ -105,7 +109,8 @@ async function ensureSessionSchema() {
     await pool.query(`NOTIFY pgrst, 'reload schema'`);
     logger.info("session schema ready");
   } catch (err) {
-    logger.warn({ err }, "Could not ensure session schema (may already exist or no access)");
+    logger.error({ err }, "Could not ensure session schema");
+    throw err;
   }
 }
 

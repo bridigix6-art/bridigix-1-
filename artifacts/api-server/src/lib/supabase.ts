@@ -1,13 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env["SUPABASE_URL"] ?? "";
-const supabaseAnonKey = process.env["SUPABASE_ANON_KEY"] ?? "";
-const supabaseServiceKey = process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? supabaseAnonKey;
+const supabaseUrl = process.env["SUPABASE_URL"]?.trim() ?? "";
+const supabaseAnonKey = process.env["SUPABASE_ANON_KEY"]?.trim() ?? "";
+const supabaseServiceKey = process.env["SUPABASE_SERVICE_ROLE_KEY"]?.trim() ?? supabaseAnonKey;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl || "https://example.supabase.co", supabaseAnonKey || "placeholder-anon-key");
 
 // Service-role client — used for storage uploads and admin operations
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+export const supabaseAdmin = createClient(supabaseUrl || "https://example.supabase.co", supabaseServiceKey || "placeholder-service-role-key");
 
 async function ensureTable(tableName: string, sql: string) {
   if (!supabaseUrl || !supabaseServiceKey) {

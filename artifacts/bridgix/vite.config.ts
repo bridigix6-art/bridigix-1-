@@ -21,21 +21,27 @@ const isReplitRuntime = Boolean(
     process.env.REPL_OWNER,
 );
 
+const cartographerPlugin = isReplitRuntime
+  ? await (async () => {
+      try {
+        const mod = await import("@replit/vite-plugin-cartographer");
+        return mod.cartographer({
+          root: path.resolve(import.meta.dirname, ".."),
+        });
+      } catch (error) {
+        console.warn("Skipping Replit cartographer plugin:", error);
+        return null;
+      }
+    })()
+  : null;
+
 export default defineConfig({
   base: basePath,
   plugins: [
     react(),
     tailwindcss(),
     ...(isReplitRuntime ? [runtimeErrorOverlay()] : []),
-    ...(isReplitRuntime
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer({
-              root: path.resolve(import.meta.dirname, ".."),
-            }),
-          ),
-        ]
-      : []),
+    ...(cartographerPlugin ? [cartographerPlugin] : []),
   ],
   resolve: {
     alias: {

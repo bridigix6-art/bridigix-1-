@@ -4,7 +4,11 @@ import { pool } from "@workspace/db";
 
 const router = Router();
 
-const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"] ?? "bridigix2025admin";
+const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"]?.trim();
+
+if (!ADMIN_PASSWORD) {
+  throw new Error("ADMIN_PASSWORD must be set before starting the admin API.");
+}
 
 function checkAuth(req: Request, res: Response, next: NextFunction) {
   const auth = req.headers["x-admin-password"];

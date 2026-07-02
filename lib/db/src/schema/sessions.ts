@@ -1,9 +1,9 @@
-import { pgTable, uuid, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { type InferInsertModel, type InferSelectModel, sql } from "drizzle-orm";
+import { pgTable, text, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
 
 export const sessionsTable = pgTable("sessions", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: text("id").primaryKey().default(sql`gen_random_uuid()::text`),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   status: text("status").notNull().default("in_progress"), // 'in_progress' | 'complete' | 'abandoned'
@@ -16,5 +16,5 @@ export const insertSessionSchema = createInsertSchema(sessionsTable).omit({
   updatedAt: true,
 });
 
-export type InsertSession = z.infer<typeof insertSessionSchema>;
-export type Session = typeof sessionsTable.$inferSelect;
+export type InsertSession = InferInsertModel<typeof sessionsTable>;
+export type Session = InferSelectModel<typeof sessionsTable>;
