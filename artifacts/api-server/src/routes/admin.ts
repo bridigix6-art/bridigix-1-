@@ -132,16 +132,22 @@ router.post("/admin/setup-db", checkAuth, async (req, res) => {
       CREATE INDEX IF NOT EXISTS completed_intakes_session_idx ON completed_intakes(session_id);
     `;
 
-    const result = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/database/query`, {
+    type SupabaseQueryResponse = {
+      ok: boolean;
+      status: number;
+      json: () => Promise<unknown>;
+    };
+
+    const result = (await fetch(`https://api.supabase.com/v1/projects/${projectRef}/database/query`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${serviceKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ query: sql }),
-    });
+    })) as SupabaseQueryResponse;
 
-    const body = await (result as any).json().catch(() => ({}));
+    const body = await result.json().catch(() => ({}));
     res.json({ ok: result.ok, status: result.status, body });
   } catch (err) {
     res.status(500).json({ error: "Setup failed" });
