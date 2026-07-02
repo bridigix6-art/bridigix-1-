@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { OpenRouter } from "@openrouter/sdk";
+import { logger } from "../lib/logger";
 import { saveSessionMessages, upsertSessionState, updateSessionStatus } from "../lib/sessionPersistence";
 
 const router = Router();
@@ -136,7 +137,7 @@ async function callOpenRouter({
     const status = typeof err === "object" && err && "statusCode" in err ? Number((err as { statusCode?: number }).statusCode) : undefined;
     const message = typeof err === "object" && err && "message" in err ? String((err as { message?: string }).message) : "OpenRouter request failed";
     const apiErr = new OpenRouterApiError(status, message);
-    console.error("OPENROUTER_MIGRATION_ERROR:", apiErr);
+    logger.error({ err: apiErr }, "OpenRouter request failed");
     throw apiErr;
   }
 }

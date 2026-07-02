@@ -8,25 +8,44 @@ import { logger } from "./lib/logger";
 const app: Express = express();
 
 app.use(
-  (pinoHttp as any)({
+  pinoHttp({
     logger,
-        serializers: {
-      req(req: any) { // <-- Add ': any' here
+    serializers: {
+      req(req: { id?: string; method?: string; url?: string }) {
         return {
           id: req.id,
           method: req.method,
           url: req.url?.split("?")[0],
         };
       },
-      res(res: any) { // <-- Add ': any' here
+      res(res: { statusCode?: number }) {
         return {
           statusCode: res.statusCode,
         };
       },
     },
   }),
-  );
-app.use(cors());
+);
+const corsOrigin = process.env["CORS_ORIGIN"]
+  ?.split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: corsOrigin?.length
+      ? corsOrigin
+      : ((origin, callback) => {
+          if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+            callback(null, true);
+            return;
+          }
+
+          callback(null, false);
+        }),
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

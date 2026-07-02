@@ -11,6 +11,11 @@ if (Number.isNaN(port) || port <= 0) {
 
 const host = process.env["HOST"] ?? "0.0.0.0";
 
+async function ensureDatabaseReady() {
+  await pool.query("SELECT 1");
+  logger.info("database connection ready");
+}
+
 async function ensureSessionSchema() {
   try {
     await pool.query(`
@@ -104,12 +109,26 @@ async function ensureSessionSchema() {
   }
 }
 
-app.listen(port, host, (err) => {
-  if (err) {
-    logger.error({ err, host, port }, "Error listening on port");
+async function startServer() {
+  try {
+    await ensureDatabaseReady();
+    await ensureSessionSchema();
+  } catch (err) {
+    logger.error({ err }, "Database startup check failed");
     process.exit(1);
   }
 
-  logger.info({ host, port }, "Server listening");
-  ensureSessionSchema().catch(() => {});
+  app.listen(port, host, (err) => {
+    if (err) {
+      logger.error({ err, host, port }, "Error listening on port");
+      process.exit(1);
+    }
+
+    logger.info({ host, port }, "Server listening");
+  });
+}
+
+startServer().catch((err) => {
+  logger.error({ err }, "Server startup failed");
+  process.exit(1);
 });
