@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useInView } from "../../hooks/use-in-view";
 import { ChatModal } from "../modals/ChatModal";
+import { FindEngineerChoiceModal } from "../modals/FindEngineerChoiceModal";
 
 function HalfEarthGlobe() {
   const latLines = [0.22, 0.38, 0.52, 0.65, 0.78];
@@ -19,7 +20,7 @@ function HalfEarthGlobe() {
 
   function lonPath(t: number) {
     const angle = t * Math.PI;
-    const points = [];
+    const points: string[] = [];
     for (let i = 0; i <= 24; i++) {
       const phi = (i / 24) * Math.PI;
       const x = cx + r * Math.sin(phi) * Math.cos(angle - Math.PI / 2);
@@ -169,10 +170,17 @@ function HalfEarthGlobe() {
 
 export function CTABanner() {
   const { ref, isInView } = useInView({ threshold: 0.15 });
+  const [choiceOpen, setChoiceOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
 
   return (
     <>
+      <FindEngineerChoiceModal
+        open={choiceOpen}
+        onClose={() => setChoiceOpen(false)}
+        onChooseForm={() => window.location.assign(`${(import.meta.env.BASE_URL || "/").replace(/\/$/, "")}/recruiter-intake`)}
+        onChooseChat={() => setChatOpen(true)}
+      />
       <ChatModal open={chatOpen} onClose={() => setChatOpen(false)} />
 
       <section
@@ -240,7 +248,7 @@ export function CTABanner() {
 
                 <div className="flex flex-col sm:flex-row gap-4 items-start">
                   <button
-                    onClick={() => setChatOpen(true)}
+                    onClick={() => setChoiceOpen(true)}
                     className="text-white font-normal text-[14px] cursor-pointer transition-all duration-250 relative overflow-hidden"
                     style={{
                       fontFamily: "'Inter', sans-serif",
