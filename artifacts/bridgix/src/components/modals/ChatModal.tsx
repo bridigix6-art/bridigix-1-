@@ -1307,7 +1307,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
           "X-Title": "Bridigix Intake",
         },
         body: JSON.stringify({
-          model: "nvidia/nemotron-3-super:free",
+          nvidia/nemotron-3-super-120b-a12b
           messages: [
             { role: "system", content: CHAT_SYSTEM_PROMPT },
             ...newMessages.map((message) => ({ role: message.role, content: message.content })),
