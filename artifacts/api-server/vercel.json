@@ -1,14 +1,6 @@
 {
-  "version": 2,
-  "functions": {
-    "api/index.js": {
-      "runtime": "@vercel/node"
-    }
-  },
+  "buildCommand": "pnpm run build",
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/api/index.[span_3](start_span)js"
-    }
+    { "source": "/api/(.*)", "destination": "/api" }
   ]
 }
