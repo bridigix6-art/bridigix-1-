@@ -3,8 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import logoImage from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
 import { apiEndpoint } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
-const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
-const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface Message { role: "user" | "assistant"; content: string; }
