@@ -1,6 +1,2 @@
-const { app } = require("../dist/index.mjs");
-
-module.exports = (req, res) => {
-  return app(req, res);
-};
-
+import { app } from "../dist/index.mjs";
+export default app;
