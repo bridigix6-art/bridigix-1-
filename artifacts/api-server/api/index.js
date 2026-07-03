@@ -1,2 +1,5 @@
 const { app } = require("../dist/index.mjs");
-module.exports = app;
+
+module.exports = (req, res) => {
+  return app(req, res);
+};
