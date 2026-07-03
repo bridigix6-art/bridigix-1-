@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import logoImage from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
 import { apiEndpoint } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -63,6 +64,130 @@ function pickFirstMessage(): string {
   return FIRST_MESSAGE_VARIANTS[Math.floor(Math.random() * FIRST_MESSAGE_VARIANTS.length)];
 }
 
+async function loadSessionFromSupabase(sessionId: string) {
+  try {
+    const [{ data: sessionData, error: sessionError }, { data: stateData, error: stateError }, { data: messagesData, error: messagesError }] = await Promise.all([
+      supabase.from("sessions").select("status").eq("id", sessionId).maybeSingle(),
+      supabase.from("session_state").select("state").eq("session_id", sessionId).maybeSingle(),
+      supabase.from("chat_messages").select("role, content").eq("session_id", sessionId).order("id", { ascending: true }),
+    ]);
+
+    if (sessionError || stateError || messagesError) {
+      throw new Error("Failed to load session state from Supabase");
+    }
+
+    const messages = ((messagesData ?? []) as Array<{ role: string; content: string }>).map((row) => ({ role: row.role as Message["role"], content: row.content }));
+    return {
+      found: messages.length > 0,
+      messages,
+      status: (sessionData?.status as string | undefined) ?? "in_progress",
+      state: (stateData?.state as Record<string, unknown> | null) ?? null,
+    };
+  } catch (error) {
+    console.error("Supabase session load error", error);
+    return { found: false, messages: [] as Message[], status: "in_progress", state: null as Record<string, unknown> | null };
+  }
+}
+
+async function saveSessionToSupabase(sessionId: string, messages: Message[], email?: string | null) {
+  try {
+    const normalizedEmail = email?.trim().toLowerCase() || null;
+    const sessionPayload = {
+      id: sessionId,
+      status: "in_progress",
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: sessionError } = await supabase.from("sessions").upsert(sessionPayload, { onConflict: "id" });
+    if (sessionError) throw sessionError;
+
+    const { error: clearError } = await supabase.from("chat_messages").delete().eq("session_id", sessionId);
+    if (clearError) throw clearError;
+
+    if (messages.length > 0) {
+      const { error: insertError } = await supabase.from("chat_messages").insert(
+        messages.map((message) => ({ session_id: sessionId, role: message.role, content: message.content })),
+      );
+      if (insertError) throw insertError;
+    }
+
+    const { error: stateError } = await supabase.from("session_state").upsert(
+      {
+        session_id: sessionId,
+        state: {
+          email: normalizedEmail,
+          status: "in_progress",
+        },
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "session_id" },
+    );
+    if (stateError) throw stateError;
+  } catch (error) {
+    console.error("Supabase session save error", error);
+  }
+}
+
+async function saveBriefToSupabase(sessionId: string, brief: HiringBrief, email?: string | null) {
+  try {
+    const normalizedEmail = email?.trim().toLowerCase() || null;
+    const { error: sessionError } = await supabase.from("sessions").upsert(
+      { id: sessionId, status: "complete", updated_at: new Date().toISOString() },
+      { onConflict: "id" },
+    );
+    if (sessionError) throw sessionError;
+
+    const { error: stateError } = await supabase.from("session_state").upsert(
+      {
+        session_id: sessionId,
+        state: {
+          email: normalizedEmail,
+          status: "complete",
+          intakeSummary: "complete",
+          brief,
+        },
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "session_id" },
+    );
+    if (stateError) throw stateError;
+  } catch (error) {
+    console.error("Supabase brief save error", error);
+  }
+}
+
+async function loadCompletedChatFromSupabase(email: string) {
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data, error } = await supabase.from("session_state").select("session_id, state").eq("state->>email", normalizedEmail);
+    if (error) throw error;
+
+    const completedEntry = (data ?? []).find((entry) => {
+      const state = (entry.state as Record<string, unknown> | null) ?? {};
+      const status = typeof state.status === "string" ? state.status : null;
+      return status === "complete" || status === "confirmed";
+    });
+
+    if (!completedEntry) {
+      return { found: false, messages: [] as Message[], intakeSummary: undefined as string | undefined };
+    }
+
+    const { data: messagesData, error: messagesError } = await supabase.from("chat_messages").select("role, content").eq("session_id", completedEntry.session_id).order("id", { ascending: true });
+    if (messagesError) throw messagesError;
+
+    const state = (completedEntry.state as Record<string, unknown> | null) ?? {};
+    const messages = ((messagesData ?? []) as Array<{ role: string; content: string }>).map((row) => ({ role: row.role as Message["role"], content: row.content }));
+    return {
+      found: messages.length > 0,
+      messages,
+      intakeSummary: typeof state.intakeSummary === "string" ? state.intakeSummary : undefined,
+    };
+  } catch (error) {
+    console.error("Supabase completed chat load error", error);
+    return { found: false, messages: [] as Message[], intakeSummary: undefined as string | undefined };
+  }
+}
+
 const STORAGE_SESSION_ID_KEY = "bridigix_session_id";
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 const COOKIE_KEY = "bridigix_tz";
@@ -75,6 +200,9 @@ const USER_BUBBLE_BG = "rgba(52,211,153,0.14)";
 const USER_BUBBLE_BORDER = "rgba(52,211,153,0.22)";
 const AI_BUBBLE_BG = "rgba(26,122,74,0.12)";
 const AI_BUBBLE_BORDER = "rgba(26,122,74,0.18)";
+const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY?.trim();
+const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
+const CHAT_SYSTEM_PROMPT = `You are Bridgix's hiring intake partner. Guide a founder through a structured hiring brief conversation, ask one question at a time, and collect the most important details without making up information. Keep your responses concise, conversational, and useful for a mobile chat experience. When enough information is present, summarize the brief clearly and tell the user that they can review and edit it before sending it to the recruiting team.`;
 
 // ─── Cookie / timezone utils ──────────────────────────────────────────────────
 
@@ -899,11 +1027,9 @@ function RecoveryBar({ onLoad, hidden }: { onLoad: (msgs: Message[]) => void; hi
     if (!trimmed) return;
     setState("loading");
     try {
-      const res = await fetch(apiEndpoint(`/api/load-chat?email=${encodeURIComponent(trimmed)}`));
-      const data = await res.json() as { found?: boolean; messages?: Message[]; intakeSummary?: string };
+      const data = await loadCompletedChatFromSupabase(trimmed);
       if (data.found && data.messages && data.messages.length > 0) {
         if (data.intakeSummary) {
-          // Conversation is already complete — do not load as resumable
           setState("already_complete");
           return;
         }
@@ -1077,17 +1203,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
     const loadSession = async () => {
       try {
-        const res = await fetch(apiEndpoint(`/api/load-session?sessionId=${encodeURIComponent(sessionId)}`));
-        if (!res.ok) {
-          startFresh();
-          return;
-        }
-        const data = await res.json() as {
-          found?: boolean;
-          messages?: Message[];
-          status?: string;
-          state?: Record<string, unknown>;
-        };
+        const data = await loadSessionFromSupabase(sessionId);
         if (data.found && Array.isArray(data.messages) && data.messages.length > 0 && data.status === "in_progress") {
           setSavedMessages(data.messages);
           setSessionPhase("continue_banner");
@@ -1118,14 +1234,10 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
     if (match && !detectedEmail) setDetectedEmail(match[0]);
   }, [messages, detectedEmail]);
 
-  // Save to DB via save-chat on every message update
+  // Persist the active conversation directly in Supabase.
   useEffect(() => {
     if (messages.length === 0 || sessionPhase !== "chat") return;
-    fetch(apiEndpoint("/api/save-chat"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: detectedEmail ?? undefined, messages, sessionId }),
-    }).catch(() => {});
+    void saveSessionToSupabase(sessionId, messages, detectedEmail ?? undefined);
   }, [messages, detectedEmail, sessionPhase, sessionId]);
 
   function startFresh() {
@@ -1163,16 +1275,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   async function handleBriefConfirm(edited: HiringBrief) {
     setReviewSaving(true);
     try {
-      await fetch(apiEndpoint("/api/save-hiring-brief"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: detectedEmail,
-          sessionId,
-          brief: edited,
-          status: "confirmed",
-        }),
-      });
+      await saveBriefToSupabase(sessionId, edited, detectedEmail ?? undefined);
     } catch { /* non-fatal */ }
     setHiringBrief(edited);
     setReviewSaving(false);
@@ -1192,28 +1295,41 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
     if (textareaRef.current) textareaRef.current.style.height = "56px";
 
     try {
-      const res = await fetch(apiEndpoint("/api/chat"), {
+      if (!OPENROUTER_API_KEY) {
+        throw new Error("OpenRouter API key is not configured.");
+      }
+
+      const res = await fetch(OPENROUTER_CHAT_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          "HTTP-Referer": "https://bridigix.ai",
+          "X-Title": "Bridigix Intake",
+        },
         body: JSON.stringify({
-          messages: newMessages.map(m => ({ role: m.role, content: m.content })),
-          sessionId,
+          model: "deepseek/deepseek-v4-flash",
+          messages: [
+            { role: "system", content: CHAT_SYSTEM_PROMPT },
+            ...newMessages.map((message) => ({ role: message.role, content: message.content })),
+          ],
+          max_tokens: 2000,
+          temperature: 0.72,
         }),
       });
 
+      const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
+        const errorMessage = (payload as { error?: { message?: string } }).error?.message || "The AI service is temporarily unavailable.";
         if (res.status === 429) {
-          const errMsg = (errData as { message?: string }).message || "The AI is a bit busy right now. Try again in a moment.";
+          const errMsg = errorMessage || "The AI is a bit busy right now. Try again in a moment.";
           setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: errMsg }]; setLatestAiIndex(u.length - 1); return u; });
           return;
         }
-        const serverMessage = (errData as { message?: string }).message;
-        throw new Error(serverMessage ? `HTTP ${res.status}: ${serverMessage}` : `HTTP ${res.status}`);
+        throw new Error(errorMessage ? `HTTP ${res.status}: ${errorMessage}` : `HTTP ${res.status}`);
       }
 
-      const data = await res.json();
-      const reply: string = data.reply ?? "";
+      const reply: string = (payload as { choices?: Array<{ message?: { content?: string | null } }> }).choices?.[0]?.message?.content ?? "";
 
       // Fire-and-forget: extract structured spec from the updated conversation
       if (reply && !reply.includes("INTAKE_COMPLETE")) {
