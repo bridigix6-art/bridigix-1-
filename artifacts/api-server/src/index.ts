@@ -2,6 +2,8 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
 
+export { app };
+
 const rawPort = process.env["PORT"] ?? "8080";
 const port = Number(rawPort);
 
@@ -133,7 +135,9 @@ async function startServer() {
   });
 }
 
-startServer().catch((err) => {
-  logger.error({ err }, "Server startup failed");
-  process.exit(1);
-});
+if (!process.env.VERCEL) {
+  startServer().catch((err) => {
+    logger.error({ err }, "Server startup failed");
+    process.exit(1);
+  });
+}
