@@ -1208,7 +1208,8 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
           setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: errMsg }]; setLatestAiIndex(u.length - 1); return u; });
           return;
         }
-        throw new Error(`HTTP ${res.status}`);
+        const serverMessage = (errData as { message?: string }).message;
+        throw new Error(serverMessage ? `HTTP ${res.status}: ${serverMessage}` : `HTTP ${res.status}`);
       }
 
       const data = await res.json();
@@ -1245,8 +1246,10 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       } else {
         setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: reply }]; setLatestAiIndex(u.length - 1); return u; });
       }
-    } catch {
-      setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: "Something went wrong. Try again in a moment." }]; setLatestAiIndex(u.length - 1); return u; });
+    } catch (error) {
+      console.error("Chat API error", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: `Error: ${errorMessage}` }]; setLatestAiIndex(u.length - 1); return u; });
     } finally {
       setLoading(false);
     }
