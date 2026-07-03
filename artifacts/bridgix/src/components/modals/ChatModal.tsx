@@ -1309,7 +1309,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
           "X-Title": "Bridigix Intake",
         },
         body: JSON.stringify({
-          model: "deepseek/deepseek-v4-flash",
+          model: "nvidia/nemotron-3-super:free",
           messages: [
             { role: "system", content: CHAT_SYSTEM_PROMPT },
             ...newMessages.map((message) => ({ role: message.role, content: message.content })),
