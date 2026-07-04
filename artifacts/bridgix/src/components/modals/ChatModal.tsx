@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { DownloadCloud, Send, Loader, Mic, Menu, X, ChevronDown, ChevronUp } from "lucide-react";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -38,6 +37,11 @@ interface HiringBrief {
 
 interface CandidateSpec {
   [key: string]: string | string[];
+}
+
+interface ChatModalProps {
+  open: boolean;
+  onClose: () => void;
 }
 
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
@@ -280,64 +284,6 @@ async function fetchLiveSpec(messages: Message[]): Promise<CandidateSpec> {
   }
 }
 
-// ─── Interactive type detection ──────────────────────────────────────────────────
-
-type InteractiveType = "slider" | "tags" | "choice" | null;
-
-function detectInteractiveType(message: string): InteractiveType {
-  const lower = message.toLowerCase();
-  if (
-    (lower.includes("structured") && (lower.includes("adaptive") || lower.includes("flexible") || lower.includes("chaotic"))) ||
-    (lower.includes("work style") || lower.includes("working style"))
-  ) return "slider";
-  if (lower.includes("tech stack") || lower.includes("technology stack") || (lower.includes("stack") && (lower.includes("using") || lower.includes("built"))) || (lower.includes("language") && lower.includes("framework"))) return "tags";
-  if ((lower.includes("contractor") || lower.includes("contract")) && (lower.includes("full-time") || lower.includes("full time") || lower.includes("permanent"))) return "choice";
-  if (lower.includes("engagement type") || (lower.includes("bring") && (lower.includes("contractor") || lower.includes("full-time")))) return "choice";
-  return null;
-}
-
-function stripContactFormSignal(text: string): string {
-  return text.replace(/render_component:\s*contact_info_form_bar\s*/gi, "").trim();
-}
-
-const TECH_TAGS = ["JavaScript", "TypeScript", "Python", "Go", "Rust", "Java", "Swift", "Kotlin", "React", "Next.js", "Vue", "Angular", "Node.js", "Express", "PostgreSQL", "MongoDB", "Redis", "MySQL", "AWS", "GCP", "Azure", "Docker", "Kubernetes"];
-
-// ─── Sidebar field builder ───────────────────────────────────────────────────
-
-interface SidebarField {
-  label: string;
-  value: string | string[];
-}
-
-function buildSidebarFields(brief: HiringBrief | null, spec: CandidateSpec): SidebarField[] {
-  if (brief) {
-    return [
-      { label: "Company", value: brief.companyContext || "" },
-      { label: "Role", value: brief.role || "" },
-      { label: "Seniority", value: brief.seniorityOwnership || "" },
-      { label: "Must-Haves", value: brief.mustHaves || "" },
-      { label: "Nice-to-Haves", value: brief.niceToHaves || "" },
-      { label: "Tech Requirements", value: brief.technicalRequirements || "" },
-      { label: "Work Style", value: brief.workStyleCulture || "" },
-      { label: "Compensation", value: brief.compensationModel || "" },
-      { label: "Timeline", value: brief.timeline || "" },
-      { label: "Contact", value: brief.contact || "" },
-    ];
-  }
-
-  return [
-    { label: "Company", value: (spec.companyContext as string) || "" },
-    { label: "Role", value: (spec.role as string) || "" },
-    { label: "Seniority", value: (spec.seniorityOwnership as string) || "" },
-    { label: "Must-Haves", value: (spec.mustHaves as string | string[]) || "" },
-    { label: "Tech Stack", value: (spec.techStack as string | string[]) || "" },
-    { label: "Timeline", value: (spec.timeline as string) || "" },
-    { label: "Compensation", value: (spec.compensationModel as string) || "" },
-    { label: "Work Style", value: (spec.workStyleCulture as string) || "" },
-    { label: "Contact", value: (spec.contact as string) || "" },
-  ];
-}
-
 // ─── PDF Generation Function ──────────────────────────────────────────────────
 
 async function generatePDFFromBrief(brief: HiringBrief): Promise<void> {
@@ -409,7 +355,43 @@ async function generatePDFFromBrief(brief: HiringBrief): Promise<void> {
   }
 }
 
-// ─── Sidebar Components ───────────────────────────────────────────────────────
+// ─── Sidebar field builder ───────────────────────────────────────────────────
+
+interface SidebarField {
+  label: string;
+  value: string | string[];
+}
+
+function buildSidebarFields(brief: HiringBrief | null, spec: CandidateSpec): SidebarField[] {
+  if (brief) {
+    return [
+      { label: "Company", value: brief.companyContext || "" },
+      { label: "Role", value: brief.role || "" },
+      { label: "Seniority", value: brief.seniorityOwnership || "" },
+      { label: "Must-Haves", value: brief.mustHaves || "" },
+      { label: "Nice-to-Haves", value: brief.niceToHaves || "" },
+      { label: "Tech Requirements", value: brief.technicalRequirements || "" },
+      { label: "Work Style", value: brief.workStyleCulture || "" },
+      { label: "Compensation", value: brief.compensationModel || "" },
+      { label: "Timeline", value: brief.timeline || "" },
+      { label: "Contact", value: brief.contact || "" },
+    ];
+  }
+
+  return [
+    { label: "Company", value: (spec.companyContext as string) || "" },
+    { label: "Role", value: (spec.role as string) || "" },
+    { label: "Seniority", value: (spec.seniorityOwnership as string) || "" },
+    { label: "Must-Haves", value: (spec.mustHaves as string | string[]) || "" },
+    { label: "Tech Stack", value: (spec.techStack as string | string[]) || "" },
+    { label: "Timeline", value: (spec.timeline as string) || "" },
+    { label: "Compensation", value: (spec.compensationModel as string) || "" },
+    { label: "Work Style", value: (spec.workStyleCulture as string) || "" },
+    { label: "Contact", value: (spec.contact as string) || "" },
+  ];
+}
+
+// ─── Sidebar Component (Desktop) ──────────────────────────────────────────────
 
 function HiringBriefSidebar({ spec, hiringBrief, visible }: { spec: CandidateSpec; hiringBrief: HiringBrief | null; visible: boolean }) {
   const fields = buildSidebarFields(hiringBrief, spec);
@@ -484,78 +466,14 @@ function HiringBriefSidebar({ spec, hiringBrief, visible }: { spec: CandidateSpe
   );
 }
 
-// Mobile Sidebar Drawer
-function SidebarDrawer({ spec, hiringBrief, visible, onClose }: { spec: CandidateSpec; hiringBrief: HiringBrief | null; visible: boolean; onClose: () => void }) {
-  const fields = buildSidebarFields(hiringBrief, spec);
-  const filled = fields.filter(f => f.value && (Array.isArray(f.value) ? f.value.length > 0 : String(f.value).trim().length > 0));
-  const progress = hiringBrief ? 100 : Math.round((filled.length / 9) * 100);
-
-  return (
-    <AnimatePresence>
-      {visible && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black bg-opacity-40 z-40 lg:hidden"
-          />
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 20 }}
-            className="fixed right-0 top-0 bottom-0 w-80 bg-white shadow-lg z-50 lg:hidden flex flex-col overflow-y-auto"
-          >
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="font-semibold text-gray-900">Hiring Brief</h3>
-              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-4 space-y-4 flex-1">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-gray-500 uppercase">{progress}%</span>
-              </div>
-              <div className="h-1 bg-gray-200 rounded-full overflow-hidden mb-4">
-                <div className="h-full bg-gradient-to-r from-green-600 to-green-400" style={{ width: `${progress}%` }} />
-              </div>
-              {filled.map((field) => {
-                const value = field.value;
-                const displayValue = Array.isArray(value) ? value.join(", ") : String(value);
-                return (
-                  <div key={field.label} className="pb-3 border-b border-gray-100">
-                    <p className="text-xs font-semibold text-gray-600 mb-1">{field.label}</p>
-                    <p className="text-xs text-gray-500 line-clamp-2">{displayValue}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
-
 // ─── Message Bubbles ──────────────────────────────────────────────────────────
 
-function AiBubble({ content, onExtractEmail }: { content: string; onExtractEmail?: (email: string) => void }) {
-  useEffect(() => {
-    const match = content.match(EMAIL_REGEX);
-    if (match && onExtractEmail) {
-      onExtractEmail(match[0]);
-    }
-  }, [content, onExtractEmail]);
-
-  const cleanContent = stripContactFormSignal(content);
-
+function AiBubble({ content }: { content: string }) {
   return (
     <div
       style={{
         alignSelf: "flex-start",
-        maxWidth: "70%",
+        maxWidth: "85%",
         padding: "12px 16px",
         borderRadius: 12,
         backgroundColor: AI_BUBBLE_BG,
@@ -566,7 +484,7 @@ function AiBubble({ content, onExtractEmail }: { content: string; onExtractEmail
         wordWrap: "break-word",
       }}
     >
-      {cleanContent}
+      {content}
     </div>
   );
 }
@@ -576,7 +494,7 @@ function UserBubble({ content }: { content: string }) {
     <div
       style={{
         alignSelf: "flex-end",
-        maxWidth: "70%",
+        maxWidth: "85%",
         padding: "12px 16px",
         borderRadius: 12,
         backgroundColor: USER_BUBBLE_BG,
@@ -598,41 +516,30 @@ const BRIEF_REVIEW_FIELDS: { key: keyof HiringBrief; label: string; hint: string
   { key: "companyContext", label: "Company Context", hint: "Company name, stage, what you do" },
   { key: "hiringMotivation", label: "Hiring Motivation", hint: "Why are you hiring now?" },
   { key: "role", label: "Role", hint: "Job title and responsibilities" },
-  { key: "seniorityOwnership", label: "Seniority & Ownership", hint: "IC vs. management, decision-making" },
+  { key: "seniorityOwnership", label: "Seniority & Ownership", hint: "IC vs. management" },
   { key: "reportingStructure", label: "Reporting Structure", hint: "Who do they report to?" },
-  { key: "successMetrics", label: "Success Metrics", hint: "How to measure 6-month success" },
+  { key: "successMetrics", label: "Success Metrics", hint: "6-month success indicators" },
   { key: "mustHaves", label: "Must-Haves", hint: "Non-negotiable skills" },
   { key: "niceToHaves", label: "Nice-to-Haves", hint: "Bonus experience" },
   { key: "dealBreakers", label: "Deal Breakers", hint: "Disqualifying factors" },
   { key: "technicalRequirements", label: "Technical Requirements", hint: "Languages, frameworks, tools" },
   { key: "workStyleCulture", label: "Work Style & Culture", hint: "Remote? Pace? Communication?" },
   { key: "compensationModel", label: "Compensation", hint: "Salary, equity, benefits" },
-  { key: "interviewProcess", label: "Interview Process", hint: "Number of rounds, who, timeline" },
-  { key: "decisionChain", label: "Decision Chain", hint: "Who decides? How long?" },
-  { key: "candidatePitch", label: "Candidate Pitch", hint: "Why candidates should want this role" },
-  { key: "recruitingStrategy", label: "Recruiting Strategy", hint: "Where to source candidates" },
+  { key: "interviewProcess", label: "Interview Process", hint: "Rounds, who, timeline" },
+  { key: "decisionChain", label: "Decision Chain", hint: "Who decides? Timeline?" },
+  { key: "candidatePitch", label: "Candidate Pitch", hint: "Why candidates want this role" },
+  { key: "recruitingStrategy", label: "Recruiting Strategy", hint: "Where to source" },
   { key: "riskRegister", label: "Risk Register", hint: "Hiring risks" },
   { key: "assumptionLog", label: "Assumption Log", hint: "Untested assumptions" },
   { key: "pastHiringSignal", label: "Past Hiring Signal", hint: "Your last great hire" },
   { key: "timeline", label: "Timeline", hint: "When do you need someone?" },
   { key: "budget", label: "Budget", hint: "Total compensation budget" },
   { key: "contact", label: "Contact", hint: "Name, email, title, company, website" },
-  { key: "openFlags", label: "Open Questions", hint: "Anything else we should know?" },
+  { key: "openFlags", label: "Open Questions", hint: "Anything else?" },
 ];
 
 function HiringBriefReview({ brief, onConfirm, isSaving }: { brief: HiringBrief; onConfirm: (edited: HiringBrief) => void; isSaving: boolean }) {
   const [edited, setEdited] = useState(brief);
-  const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
-
-  const toggleExpand = (fieldKey: string) => {
-    const newSet = new Set(expandedFields);
-    if (newSet.has(fieldKey)) {
-      newSet.delete(fieldKey);
-    } else {
-      newSet.add(fieldKey);
-    }
-    setExpandedFields(newSet);
-  };
 
   const handleFieldChange = (key: keyof HiringBrief, value: string) => {
     setEdited(prev => ({ ...prev, [key]: value }));
@@ -646,66 +553,47 @@ function HiringBriefReview({ brief, onConfirm, isSaving }: { brief: HiringBrief;
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      className="w-full max-w-2xl mx-auto px-4 py-6 space-y-6"
+      className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-6"
     >
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Review Your Hiring Brief</h2>
-        <p className="text-sm text-gray-600">Edit any field that doesn't look right, then submit to send to the recruiting team.</p>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Review Your Hiring Brief</h2>
+        <p className="text-sm text-gray-600">Edit any field, then submit to the recruiting team.</p>
       </div>
 
-      {/* Fields Grid */}
-      <div className="space-y-3">
+      {/* Fields */}
+      <div className="space-y-3 max-h-96 overflow-y-auto">
         {BRIEF_REVIEW_FIELDS.map((field) => {
           const value = edited[field.key] || "";
-          const isExpanded = expandedFields.has(field.key);
-
           return (
-            <div key={field.key} className="border border-gray-200 rounded-lg overflow-hidden">
-              <button
-                onClick={() => toggleExpand(field.key)}
-                className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition"
-              >
-                <div className="text-left flex-1">
-                  <p className="font-semibold text-sm text-gray-900">{field.label}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{value ? value.slice(0, 50) + (value.length > 50 ? "..." : "") : "Not filled"}</p>
-                </div>
-                {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-              </button>
-
-              {isExpanded && (
-                <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
-                  <textarea
-                    value={value}
-                    onChange={(e) => handleFieldChange(field.key, e.target.value)}
-                    placeholder={field.hint}
-                    className="w-full p-3 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                    rows={4}
-                  />
-                </div>
-              )}
+            <div key={field.key} className="border border-gray-200 rounded-lg p-3">
+              <label className="block text-xs font-semibold text-gray-600 mb-1">{field.label}</label>
+              <textarea
+                value={value}
+                onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                placeholder={field.hint}
+                className="w-full p-2 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
+                rows={2}
+              />
             </div>
           );
         })}
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-3 justify-center pt-4">
+      <div className="flex gap-3 justify-center flex-wrap">
         <button
           onClick={handleDownloadPDF}
           disabled={isSaving}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition disabled:opacity-50"
+          className="px-4 py-2 text-sm font-medium text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition disabled:opacity-50"
         >
-          <DownloadCloud size={16} />
-          Download PDF
+          📥 Download PDF
         </button>
         <button
           onClick={() => onConfirm(edited)}
           disabled={isSaving}
-          className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+          className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition disabled:opacity-50"
         >
-          {isSaving ? <Loader size={16} className="animate-spin" /> : <Send size={16} />}
-          {isSaving ? "Sending..." : "Confirm & Send"}
+          {isSaving ? "Sending..." : "✓ Confirm & Send"}
         </button>
       </div>
     </motion.div>
@@ -714,24 +602,19 @@ function HiringBriefReview({ brief, onConfirm, isSaving }: { brief: HiringBrief;
 
 // ─── Main ChatModal Component ───────────────────────────────────────────────────
 
-export default function ChatModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function ChatModal({ open, onClose }: ChatModalProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [complete, setComplete] = useState(false);
   const [latestAiIndex, setLatestAiIndex] = useState(-1);
-  const [sessionPhase, setSessionPhase] = useState<"init" | "continue_banner" | "chat" | "review">("init");
+  const [sessionPhase, setSessionPhase] = useState<"init" | "chat" | "review">("init");
   const [detectedEmail, setDetectedEmail] = useState<string | null>(null);
-  const [recoveryBarHidden, setRecoveryBarHidden] = useState(false);
-  const [savedMessages, setSavedMessages] = useState<Message[] | null>(null);
   const [isListening, setIsListening] = useState(false);
-  const [interactiveUsed] = useState<Set<number>>(new Set());
-  const [contactFormIndex, setContactFormIndex] = useState<number | null>(null);
   const [hiringBrief, setHiringBrief] = useState<HiringBrief | null>(null);
   const [reviewSaving, setReviewSaving] = useState(false);
   const [liveSpec, setLiveSpec] = useState<CandidateSpec>({});
   const [showSidebar, setShowSidebar] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sessionId] = useState<string>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem(STORAGE_SESSION_ID_KEY);
@@ -794,7 +677,7 @@ export default function ChatModal({ open, onClose }: { open: boolean; onClose: (
 
   useEffect(() => { scrollToBottom(); }, [messages, loading, scrollToBottom]);
 
-  // ─── Modal open/close lifecycle ──────────────────────────────────────────────
+  // ─── Modal lifecycle ──────────────────────────────────────────────────
 
   useEffect(() => {
     if (!open) {
@@ -803,14 +686,10 @@ export default function ChatModal({ open, onClose }: { open: boolean; onClose: (
       setComplete(false);
       setLatestAiIndex(-1);
       setDetectedEmail(null);
-      setRecoveryBarHidden(false);
-      setSavedMessages(null);
       setInput("");
-      setContactFormIndex(null);
       setHiringBrief(null);
       setReviewSaving(false);
       setShowSidebar(true);
-      setSidebarOpen(false);
       setLiveSpec({});
       return;
     }
@@ -823,6 +702,8 @@ export default function ChatModal({ open, onClose }: { open: boolean; onClose: (
     }
 
     setSessionPhase("chat");
+    setMessages([{ role: "assistant", content: getTimeGreeting() + " Let's build your hiring brief together. Tell me about the role you're looking to fill." }]);
+    setLatestAiIndex(0);
   }, [open, sessionId]);
 
   // ─── Main sendMessage function ───────────────────────────────────────────────
@@ -865,17 +746,18 @@ export default function ChatModal({ open, onClose }: { open: boolean; onClose: (
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
         const errorMessage = (payload as { error?: { message?: string } }).error?.message || "The AI service is temporarily unavailable.";
-        if (res.status === 429) {
-          const errMsg = errorMessage || "The AI is a bit busy right now. Try again in a moment.";
-          setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: errMsg }]; setLatestAiIndex(u.length - 1); return u; });
-          return;
-        }
         throw new Error(errorMessage ? `HTTP ${res.status}: ${errorMessage}` : `HTTP ${res.status}`);
       }
 
       const reply: string = (payload as { choices?: Array<{ message?: { content?: string | null } }> }).choices?.[0]?.message?.content ?? "";
 
-      // FIXED: Fetch live spec from OpenRouter on each AI response
+      // Extract email if present
+      const emailMatch = reply.match(EMAIL_REGEX);
+      if (emailMatch && !detectedEmail) {
+        setDetectedEmail(emailMatch[0]);
+      }
+
+      // Fetch live spec on each response (if not INTAKE_COMPLETE)
       if (reply && !reply.includes("INTAKE_COMPLETE")) {
         const fullConv = [...newMessages, { role: "assistant" as const, content: reply }];
         fetchLiveSpec(fullConv).then(extracted => {
@@ -893,7 +775,7 @@ export default function ChatModal({ open, onClose }: { open: boolean; onClose: (
         // Add final message and transition to review phase
         const finalMsg = "Perfect — I've got everything I need. Review the brief and make any edits before submitting to the team.";
         setMessages(prev => [...prev, { role: "assistant" as const, content: finalMsg }]);
-        setLatestAiIndex(messages.length + 1);
+        setLatestAiIndex(newMessages.length);
         setComplete(true);
         
         // Delay transition to allow user to see the message
@@ -903,29 +785,27 @@ export default function ChatModal({ open, onClose }: { open: boolean; onClose: (
       } else {
         // Regular AI response
         setMessages(prev => [...prev, { role: "assistant" as const, content: reply }]);
-        setLatestAiIndex(messages.length + 1);
+        setLatestAiIndex(newMessages.length);
       }
     } catch (err) {
       const errorText = err instanceof Error ? err.message : "An unexpected error occurred.";
       setMessages(prev => [...prev, { role: "assistant" as const, content: `Error: ${errorText}` }]);
-      setLatestAiIndex(messages.length + 1);
+      setLatestAiIndex(newMessages.length);
     } finally {
       setLoading(false);
     }
-  }, [messages, input, loading, complete, sessionPhase]);
+  }, [messages, input, loading, complete, sessionPhase, detectedEmail]);
 
   // ─── Handle brief confirmation ───────────────────────────────────────────────
 
   async function handleBriefConfirm(edited: HiringBrief) {
     setReviewSaving(true);
     try {
-      // TODO: Save to Supabase
-      // await saveBriefToSupabase(sessionId, edited, detectedEmail ?? undefined);
+      // TODO: Save to Supabase if needed
+      setHiringBrief(edited);
     } catch { /* non-fatal */ }
-    setHiringBrief(edited);
     setReviewSaving(false);
     setComplete(true);
-    setSessionPhase("chat");
   }
 
   // ─── Render ──────────────────────────────────────────────────────────────────
@@ -937,34 +817,26 @@ export default function ChatModal({ open, onClose }: { open: boolean; onClose: (
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-40 z-40 flex items-end sm:items-center justify-center"
+          className="fixed inset-0 bg-black/40 z-40 flex items-end sm:items-center justify-center"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="w-full h-full sm:h-auto sm:max-h-96 sm:rounded-lg sm:w-full sm:max-w-4xl bg-white shadow-2xl flex flex-col overflow-hidden"
+            className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:rounded-lg sm:w-full sm:max-w-5xl bg-white shadow-2xl flex flex-col overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Hiring Intake</h2>
-                <p className="text-xs text-gray-500 mt-1">Let's build your hiring brief together</p>
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 flex-shrink-0">
+              <div className="min-w-0">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Hiring Intake</h2>
+                <p className="text-xs text-gray-500 mt-1">Build your hiring brief</p>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded"
-                >
-                  <Menu size={20} />
-                </button>
-                <button
-                  onClick={onClose}
-                  className="p-2 text-gray-600 hover:bg-gray-100 rounded"
-                >
-                  <X size={20} />
-                </button>
-              </div>
+              <button
+                onClick={onClose}
+                className="ml-4 p-2 text-gray-600 hover:bg-gray-100 rounded flex-shrink-0"
+              >
+                ✕
+              </button>
             </div>
 
             {/* Main Content */}
@@ -972,7 +844,7 @@ export default function ChatModal({ open, onClose }: { open: boolean; onClose: (
               {/* Chat Area */}
               <div className="flex-1 flex flex-col overflow-hidden">
                 {sessionPhase === "review" && hiringBrief ? (
-                  <div className="flex-1 overflow-y-auto p-4">
+                  <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                     <HiringBriefReview
                       brief={hiringBrief}
                       onConfirm={handleBriefConfirm}
@@ -982,35 +854,25 @@ export default function ChatModal({ open, onClose }: { open: boolean; onClose: (
                 ) : (
                   <>
                     {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col">
                       {messages.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center">
-                          <div className="text-5xl mb-4">👋</div>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2">{getTimeGreeting()}</h3>
-                          <p className="text-sm text-gray-600 max-w-xs">
-                            I'm here to help you build a comprehensive hiring brief. Tell me about the role you're looking to fill.
-                          </p>
+                        <div className="flex-1 flex items-center justify-center">
+                          <p className="text-center text-sm text-gray-600">Loading...</p>
                         </div>
                       ) : (
                         messages.map((msg, i) => (
-                          <div key={i} className="flex gap-3">
-                            {msg.role === "assistant" && (
-                              <AiBubble
-                                content={msg.content}
-                                onExtractEmail={(email) => setDetectedEmail(email)}
-                              />
-                            )}
+                          <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                            {msg.role === "assistant" && <AiBubble content={msg.content} />}
                             {msg.role === "user" && <UserBubble content={msg.content} />}
                           </div>
                         ))
                       )}
                       {loading && (
                         <div className="flex gap-3">
-                          <div className="text-2xl">⏳</div>
-                          <div className="flex gap-1 items-center">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+                          <div className="flex gap-1 items-center px-4 py-2 rounded-lg" style={{ backgroundColor: AI_BUBBLE_BG }}>
+                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" />
+                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
+                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
                           </div>
                         </div>
                       )}
@@ -1018,8 +880,8 @@ export default function ChatModal({ open, onClose }: { open: boolean; onClose: (
                     </div>
 
                     {/* Input Area */}
-                    <div className="border-t border-gray-200 p-4 bg-gray-50">
-                      <div className="flex gap-3">
+                    <div className="border-t border-gray-200 p-4 bg-gray-50 flex-shrink-0">
+                      <div className="flex gap-2 sm:gap-3">
                         <div className="flex-1 relative">
                           <textarea
                             ref={textareaRef}
@@ -1043,17 +905,17 @@ export default function ChatModal({ open, onClose }: { open: boolean; onClose: (
                           />
                           <button
                             onClick={handleMicClick}
-                            className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded ${isListening ? "bg-red-100 text-red-600" : "text-gray-400 hover:text-gray-600"}`}
+                            className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded transition ${isListening ? "bg-red-100 text-red-600" : "text-gray-400 hover:text-gray-600"}`}
                           >
-                            <Mic size={18} />
+                            🎤
                           </button>
                         </div>
                         <button
                           onClick={() => sendMessage()}
                           disabled={!input.trim() || loading}
-                          className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                          className="px-3 sm:px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 flex-shrink-0"
                         >
-                          <Send size={18} />
+                          ➤
                         </button>
                       </div>
                     </div>
@@ -1065,14 +927,6 @@ export default function ChatModal({ open, onClose }: { open: boolean; onClose: (
               <HiringBriefSidebar spec={spec} hiringBrief={hiringBrief} visible={showSidebar} />
             </div>
           </motion.div>
-
-          {/* Mobile Drawer */}
-          <SidebarDrawer
-            spec={spec}
-            hiringBrief={hiringBrief}
-            visible={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-          />
         </motion.div>
       )}
     </AnimatePresence>
