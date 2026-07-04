@@ -1,207 +1,128 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import logoImage from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
-import { apiEndpoint } from "@/lib/api";
-import { supabase } from "@/lib/supabase";
-// ─── Types ───────────────────────────────────────────────────────────────────
+import { DownloadCloud, Send, Loader, Mic, Menu, X, ChevronDown, ChevronUp } from "lucide-react";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 
-interface Message { role: "user" | "assistant"; content: string; }
-interface ChatModalProps { open: boolean; onClose: () => void; }
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
 
 interface HiringBrief {
-  companyContext: string;
-  hiringMotivation: string;
-  role: string;
-  seniorityOwnership: string;
-  reportingStructure: string;
-  successMetrics: string;
-  mustHaves: string;
-  niceToHaves: string;
-  dealBreakers: string;
-  technicalRequirements: string;
-  workStyleCulture: string;
-  compensationModel: string;
-  interviewProcess: string;
-  decisionChain: string;
-  candidatePitch: string;
-  recruitingStrategy: string;
-  riskRegister: string;
-  assumptionLog: string;
-  pastHiringSignal: string;
-  timeline: string;
-  budget: string;
-  contact: string;
-  openFlags: string;
+  companyContext?: string;
+  hiringMotivation?: string;
+  role?: string;
+  seniorityOwnership?: string;
+  reportingStructure?: string;
+  successMetrics?: string;
+  mustHaves?: string;
+  niceToHaves?: string;
+  dealBreakers?: string;
+  technicalRequirements?: string;
+  workStyleCulture?: string;
+  compensationModel?: string;
+  interviewProcess?: string;
+  decisionChain?: string;
+  candidatePitch?: string;
+  recruitingStrategy?: string;
+  riskRegister?: string;
+  assumptionLog?: string;
+  pastHiringSignal?: string;
+  timeline?: string;
+  budget?: string;
+  contact?: string;
+  openFlags?: string;
   rawIntake?: string;
 }
 
 interface CandidateSpec {
-  company?: string;
-  role?: string;
-  seniority?: string;
-  techStack?: string[];
-  contractType?: string;
-  workStyle?: string;
-  timeline?: string;
-  budget?: string;
-  contact?: string;
+  [key: string]: string | string[];
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const FIRST_MESSAGE_VARIANTS = [
-  "Tell me a bit about what you're building — what does your company do?",
-  "Let's start from the top — what are you building, and what problem does it solve?",
-  "Before we get into the role, give me a sense of the company — what are you working on?",
-  "Start me off with the basics — what does your company do and who is it built for?",
-  "What's the product, and what stage are you at? Give me the short version first.",
-  "Tell me about the company — what are you building and what problem are you solving?",
-  "What does your company do? Walk me through what you're building.",
-];
-
-function pickFirstMessage(): string {
-  return FIRST_MESSAGE_VARIANTS[Math.floor(Math.random() * FIRST_MESSAGE_VARIANTS.length)];
-}
-
-async function loadSessionFromSupabase(sessionId: string) {
-  try {
-    const [{ data: sessionData, error: sessionError }, { data: stateData, error: stateError }, { data: messagesData, error: messagesError }] = await Promise.all([
-      supabase.from("sessions").select("status").eq("id", sessionId).maybeSingle(),
-      supabase.from("session_state").select("state").eq("session_id", sessionId).maybeSingle(),
-      supabase.from("chat_messages").select("role, content").eq("session_id", sessionId).order("id", { ascending: true }),
-    ]);
-
-    if (sessionError || stateError || messagesError) {
-      throw new Error("Failed to load session state from Supabase");
-    }
-
-    const messages = ((messagesData ?? []) as Array<{ role: string; content: string }>).map((row) => ({ role: row.role as Message["role"], content: row.content }));
-    return {
-      found: messages.length > 0,
-      messages,
-      status: (sessionData?.status as string | undefined) ?? "in_progress",
-      state: (stateData?.state as Record<string, unknown> | null) ?? null,
-    };
-  } catch (error) {
-    console.error("Supabase session load error", error);
-    return { found: false, messages: [] as Message[], status: "in_progress", state: null as Record<string, unknown> | null };
-  }
-}
-
-async function saveSessionToSupabase(sessionId: string, messages: Message[], email?: string | null) {
-  try {
-    const normalizedEmail = email?.trim().toLowerCase() || null;
-    const sessionPayload = {
-      id: sessionId,
-      status: "in_progress",
-      updated_at: new Date().toISOString(),
-    };
-
-    const { error: sessionError } = await supabase.from("sessions").upsert(sessionPayload, { onConflict: "id" });
-    if (sessionError) throw sessionError;
-
-    const { error: clearError } = await supabase.from("chat_messages").delete().eq("session_id", sessionId);
-    if (clearError) throw clearError;
-
-    if (messages.length > 0) {
-      const { error: insertError } = await supabase.from("chat_messages").insert(
-        messages.map((message) => ({ session_id: sessionId, role: message.role, content: message.content })),
-      );
-      if (insertError) throw insertError;
-    }
-
-    const { error: stateError } = await supabase.from("session_state").upsert(
-      {
-        session_id: sessionId,
-        state: {
-          email: normalizedEmail,
-          status: "in_progress",
-        },
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "session_id" },
-    );
-    if (stateError) throw stateError;
-  } catch (error) {
-    console.error("Supabase session save error", error);
-  }
-}
-
-async function saveBriefToSupabase(sessionId: string, brief: HiringBrief, email?: string | null) {
-  try {
-    const normalizedEmail = email?.trim().toLowerCase() || null;
-    const { error: sessionError } = await supabase.from("sessions").upsert(
-      { id: sessionId, status: "complete", updated_at: new Date().toISOString() },
-      { onConflict: "id" },
-    );
-    if (sessionError) throw sessionError;
-
-    const { error: stateError } = await supabase.from("session_state").upsert(
-      {
-        session_id: sessionId,
-        state: {
-          email: normalizedEmail,
-          status: "complete",
-          intakeSummary: "complete",
-          brief,
-        },
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "session_id" },
-    );
-    if (stateError) throw stateError;
-  } catch (error) {
-    console.error("Supabase brief save error", error);
-  }
-}
-
-async function loadCompletedChatFromSupabase(email: string) {
-  try {
-    const normalizedEmail = email.trim().toLowerCase();
-    const { data, error } = await supabase.from("session_state").select("session_id, state").eq("state->>email", normalizedEmail);
-    if (error) throw error;
-
-    const completedEntry = (data ?? []).find((entry) => {
-      const state = (entry.state as Record<string, unknown> | null) ?? {};
-      const status = typeof state.status === "string" ? state.status : null;
-      return status === "complete" || status === "confirmed";
-    });
-
-    if (!completedEntry) {
-      return { found: false, messages: [] as Message[], intakeSummary: undefined as string | undefined };
-    }
-
-    const { data: messagesData, error: messagesError } = await supabase.from("chat_messages").select("role, content").eq("session_id", completedEntry.session_id).order("id", { ascending: true });
-    if (messagesError) throw messagesError;
-
-    const state = (completedEntry.state as Record<string, unknown> | null) ?? {};
-    const messages = ((messagesData ?? []) as Array<{ role: string; content: string }>).map((row) => ({ role: row.role as Message["role"], content: row.content }));
-    return {
-      found: messages.length > 0,
-      messages,
-      intakeSummary: typeof state.intakeSummary === "string" ? state.intakeSummary : undefined,
-    };
-  } catch (error) {
-    console.error("Supabase completed chat load error", error);
-    return { found: false, messages: [] as Message[], intakeSummary: undefined as string | undefined };
-  }
-}
-
-const STORAGE_SESSION_ID_KEY = "bridigix_session_id";
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 const COOKIE_KEY = "bridigix_tz";
+const STORAGE_SESSION_ID_KEY = "bridigix_session_id";
 
 const ACCENT = "#1A7A4A";
 const BG = "#FAFAF8";
 const DARK = "#0A0A0A";
-// Section 3 — bubble colors: user = light mint, AI = darker forest green
 const USER_BUBBLE_BG = "rgba(52,211,153,0.14)";
 const USER_BUBBLE_BORDER = "rgba(52,211,153,0.22)";
 const AI_BUBBLE_BG = "rgba(26,122,74,0.12)";
 const AI_BUBBLE_BORDER = "rgba(26,122,74,0.18)";
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY?.trim();
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
-const CHAT_SYSTEM_PROMPT = `You are Bridgix's hiring intake partner. Guide a founder through a structured hiring brief conversation, ask one question at a time, and collect the most important details without making up information. Keep your responses concise, conversational, and useful for a mobile chat experience. When enough information is present, summarize the brief clearly and tell the user that they can review and edit it before sending it to the recruiting team.`;
+
+// ─── ENHANCED SYSTEM PROMPT ───────────────────────────────────────────────────
+// Explicitly instructs model on exact format, all fields, and INTAKE_COMPLETE marker
+const CHAT_SYSTEM_PROMPT = `You are Bridigix's hiring intake partner. Guide a founder through a structured hiring intake conversation to build a complete hiring brief.
+
+**CONVERSATION RULES:**
+1. Ask ONE question at a time, focused and conversational.
+2. Listen to the founder's answers and reflect back understanding.
+3. Build rapport — this is a conversation, not an interrogation.
+4. Keep responses brief (2-3 sentences) for mobile chat readability.
+
+**FIELDS YOU MUST COLLECT (in approximate order, but adapt to conversation flow):**
+1. COMPANY CONTEXT — company name, stage, industry, what problem they solve
+2. HIRING MOTIVATION — why are they hiring now? growth, replacement, new team?
+3. ROLE — job title, what the person will do day-to-day
+4. SENIORITY & OWNERSHIP — IC vs. management, budget ownership, decision-making authority
+5. REPORTING STRUCTURE — who do they report to? team size they'll manage?
+6. SUCCESS METRICS — how will we know if this hire is a win after 6 months?
+7. CANDIDATE PROFILE — MUST-HAVES — skills, experience, mindset that's non-negotiable
+8. CANDIDATE PROFILE — NICE-TO-HAVES — bonus skills or background
+9. DEAL BREAKERS — what absolutely disqualifies someone?
+10. TECHNICAL REQUIREMENTS — specific languages, frameworks, tools required?
+11. WORK STYLE & CULTURE — remote/office? communication style? pace?
+12. COMPENSATION MODEL — salary range, equity, benefits, flexibility?
+13. INTERVIEW PROCESS — how many rounds? who interviews? timeline?
+14. DECISION CHAIN — who decides? how long until offer?
+15. CANDIDATE PITCH — what's compelling about this role and company?
+16. RECRUITING STRATEGY — where to source? internal referrals? headhunter?
+17. RISK REGISTER — what could go wrong? key hiring risks?
+18. ASSUMPTION LOG — what are you assuming that might not be true?
+19. PAST HIRING SIGNAL — tell me about your last great hire. what made them great?
+20. TIMELINE — when do you need someone? hard deadline?
+21. BUDGET — total comp budget, flexibility?
+22. CONTACT — name, email, title, company website for the hiring contact
+23. OPEN QUESTIONS OR FLAGS — anything else we should know?
+
+**AFTER COLLECTING ALL 23 FIELDS:**
+When you have gathered substantive information on all 23 fields above (even if brief), output the hiring brief in this EXACT format. Use these EXACT labels followed by a colon, one field per line:
+
+INTAKE_COMPLETE
+
+COMPANY CONTEXT: [content]
+HIRING MOTIVATION: [content]
+ROLE: [content]
+SENIORITY & OWNERSHIP: [content]
+REPORTING STRUCTURE: [content]
+SUCCESS METRICS: [content]
+CANDIDATE PROFILE — MUST-HAVES: [content]
+CANDIDATE PROFILE — NICE-TO-HAVES: [content]
+DEAL BREAKERS: [content]
+TECHNICAL REQUIREMENTS: [content]
+WORK STYLE & CULTURE: [content]
+COMPENSATION MODEL: [content]
+INTERVIEW PROCESS: [content]
+DECISION CHAIN: [content]
+CANDIDATE PITCH: [content]
+RECRUITING STRATEGY: [content]
+RISK REGISTER: [content]
+ASSUMPTION LOG: [content]
+PAST HIRING SIGNAL: [content]
+TIMELINE: [content]
+BUDGET: [content]
+CONTACT: [content]
+OPEN QUESTIONS OR FLAGS: [content]
+
+**CRITICAL RULES:**
+- Do NOT invent information. If they haven't answered a question, make a note like "Not yet discussed" or ask the question.
+- Do NOT output INTAKE_COMPLETE until you have asked about ALL 23 FIELDS and received substantive responses (even if some are brief).
+- Use the exact field labels and colon format shown above — this is essential for parsing.
+- Be conversational and warm — don't sound robotic.`;
 
 // ─── Cookie / timezone utils ──────────────────────────────────────────────────
 
@@ -307,24 +228,59 @@ function parseIntakeComplete(text: string): HiringBrief {
   };
 }
 
-// ─── Incremental spec extraction (during conversation) ───────────────────────
+// ─── FIXED: fetchLiveSpec now calls OpenRouter directly ──────────────────────
 
 async function fetchLiveSpec(messages: Message[]): Promise<CandidateSpec> {
   try {
-    const res = await fetch(apiEndpoint("/api/extract-spec"), {
+    if (!OPENROUTER_API_KEY) {
+      return {};
+    }
+
+    const res = await fetch(OPENROUTER_CHAT_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages }),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://bridigix.ai",
+        "X-Title": "Bridigix Intake",
+      },
+      body: JSON.stringify({
+        model: "qwen/qwen3-next-80b-a3b-instruct:free",
+        messages: [
+          {
+            role: "system",
+            content: `Extract hiring brief fields from the conversation so far. Return ONLY valid JSON (no markdown, no extra text) with keys like companyContext, role, mustHaves, timeline, etc. Example: {"companyContext": "...", "role": "..."}.`,
+          },
+          ...messages.map((m) => ({ role: m.role, content: m.content })),
+        ],
+        max_tokens: 1000,
+        temperature: 0.5,
+      }),
     });
-    if (!res.ok) return {};
-    const data = await res.json() as { spec?: CandidateSpec };
-    return data.spec ?? {};
+
+    if (!res.ok) {
+      return {};
+    }
+
+    const payload = await res.json().catch(() => ({}));
+    const reply: string = (payload as { choices?: Array<{ message?: { content?: string | null } }> }).choices?.[0]?.message?.content ?? "";
+
+    if (!reply) return {};
+
+    // Parse JSON response
+    try {
+      const parsed = JSON.parse(reply) as CandidateSpec;
+      return parsed;
+    } catch {
+      // If not valid JSON, return empty
+      return {};
+    }
   } catch {
     return {};
   }
 }
 
-// ─── Interactive type detection ──────────────────────────────────────────────
+// ─── Interactive type detection ──────────────────────────────────────────────────
 
 type InteractiveType = "slider" | "tags" | "choice" | null;
 
@@ -345,267 +301,115 @@ function stripContactFormSignal(text: string): string {
 }
 
 const TECH_TAGS = ["JavaScript", "TypeScript", "Python", "Go", "Rust", "Java", "Swift", "Kotlin", "React", "Next.js", "Vue", "Angular", "Node.js", "Express", "PostgreSQL", "MongoDB", "Redis", "MySQL", "AWS", "GCP", "Azure", "Docker", "Kubernetes"];
-const CONTRACT_OPTIONS = ["Full-time / Permanent", "Contract / Short-term", "Part-time", "Freelance", "Not sure yet"];
 
-// ─── Interactive UI components ───────────────────────────────────────────────
+// ─── Sidebar field builder ───────────────────────────────────────────────────
 
-function SliderInput({ onConfirm }: { onConfirm: (value: string) => void }) {
-  const [val, setVal] = useState(50);
-  const labels = ["Fully Structured", "Mostly Structured", "Balanced", "Mostly Adaptive", "Highly Adaptive"];
-  const labelIndex = Math.round((val / 100) * (labels.length - 1));
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      style={{ background: `rgba(26,122,74,0.06)`, border: `1px solid rgba(26,122,74,0.14)`, borderRadius: 18, padding: "20px 22px", maxWidth: 420, fontFamily: "Inter, sans-serif" }}>
-      <p style={{ fontSize: 13, color: "#6B6B6B", marginBottom: 16 }}>Drag to describe your team's working style</p>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9B9B9B", marginBottom: 8 }}>
-        <span>Structured</span><span>Highly Adaptive</span>
-      </div>
-      <input type="range" min={0} max={100} value={val} onChange={e => setVal(Number(e.target.value))}
-        style={{ width: "100%", accentColor: ACCENT, cursor: "pointer", marginBottom: 12 }} />
-      <div style={{ textAlign: "center", marginBottom: 16 }}>
-        <span style={{ display: "inline-block", background: ACCENT, color: "white", borderRadius: 20, padding: "4px 14px", fontSize: 13, fontWeight: 500 }}>{labels[labelIndex]}</span>
-      </div>
-      <button onClick={() => onConfirm(`Work style: ${labels[labelIndex]}`)}
-        style={{ width: "100%", background: DARK, color: "white", border: "none", borderRadius: 10, padding: "11px", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-        Confirm
-      </button>
-    </motion.div>
-  );
+interface SidebarField {
+  label: string;
+  value: string | string[];
 }
 
-function TagsInput({ onConfirm }: { onConfirm: (value: string) => void }) {
-  const [selected, setSelected] = useState<string[]>([]);
-  const [custom, setCustom] = useState("");
-  const toggle = (tag: string) => setSelected(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
-  const addCustom = () => { const t = custom.trim(); if (t && !selected.includes(t)) setSelected(prev => [...prev, t]); setCustom(""); };
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      style={{ background: "rgba(26,122,74,0.06)", border: "1px solid rgba(26,122,74,0.14)", borderRadius: 18, padding: "20px 22px", maxWidth: 480, fontFamily: "Inter, sans-serif" }}>
-      <p style={{ fontSize: 13, color: "#6B6B6B", marginBottom: 14 }}>Select all that apply, or type your own</p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
-        {TECH_TAGS.map(tag => {
-          const active = selected.includes(tag);
-          return (
-            <button key={tag} onClick={() => toggle(tag)}
-              style={{ border: `1px solid ${active ? ACCENT : "#E0E0DE"}`, borderRadius: 20, padding: "6px 14px", fontSize: 13, background: active ? ACCENT : "white", color: active ? "white" : DARK, cursor: "pointer", fontFamily: "Inter, sans-serif", transition: "all 0.15s", fontWeight: active ? 500 : 400 }}>
-              {tag}
-            </button>
-          );
-        })}
-      </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-        <input value={custom} onChange={e => setCustom(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } }}
-          placeholder="Add custom (e.g. Elixir, Svelte...)"
-          style={{ flex: 1, border: "1px solid #E0E0DE", borderRadius: 8, padding: "8px 12px", fontSize: 13, fontFamily: "Inter, sans-serif", outline: "none", background: "white" }} />
-        <button onClick={addCustom} style={{ background: "rgba(26,122,74,0.1)", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, color: ACCENT, cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500 }}>Add</button>
-      </div>
-      {selected.length > 0 && (
-        <div style={{ marginBottom: 14, display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {selected.map(t => (
-            <span key={t} style={{ background: "rgba(26,122,74,0.1)", color: ACCENT, borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 500, fontFamily: "Inter, sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
-              {t}
-              <button onClick={() => setSelected(prev => prev.filter(x => x !== t))} style={{ background: "none", border: "none", cursor: "pointer", color: ACCENT, fontSize: 14, padding: 0, lineHeight: 1 }}>×</button>
-            </span>
-          ))}
-        </div>
-      )}
-      <button disabled={selected.length === 0} onClick={() => onConfirm(`Tech stack: ${selected.join(", ")}`)}
-        style={{ width: "100%", background: selected.length > 0 ? DARK : "#E4E4E2", color: selected.length > 0 ? "white" : "#B0B0B0", border: "none", borderRadius: 10, padding: "11px", fontSize: 14, fontWeight: 500, cursor: selected.length > 0 ? "pointer" : "not-allowed", fontFamily: "Inter, sans-serif" }}>
-        Confirm selection{selected.length > 0 ? ` (${selected.length})` : ""}
-      </button>
-    </motion.div>
-  );
-}
-
-function ChoiceInput({ onConfirm }: { onConfirm: (value: string) => void }) {
-  const [selected, setSelected] = useState<string | null>(null);
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      style={{ background: "rgba(26,122,74,0.06)", border: "1px solid rgba(26,122,74,0.14)", borderRadius: 18, padding: "20px 22px", maxWidth: 400, fontFamily: "Inter, sans-serif" }}>
-      <p style={{ fontSize: 13, color: "#6B6B6B", marginBottom: 14 }}>Select the engagement type</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-        {CONTRACT_OPTIONS.map(opt => {
-          const active = selected === opt;
-          return (
-            <button key={opt} onClick={() => setSelected(opt)}
-              style={{ border: `1.5px solid ${active ? ACCENT : "#E0E0DE"}`, borderRadius: 10, padding: "11px 16px", fontSize: 14, background: active ? "rgba(26,122,74,0.08)" : "white", color: active ? ACCENT : DARK, cursor: "pointer", fontFamily: "Inter, sans-serif", textAlign: "left", transition: "all 0.15s", fontWeight: active ? 500 : 400, display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${active ? ACCENT : "#C0C0C0"}`, background: active ? ACCENT : "white", flexShrink: 0, transition: "all 0.15s" }} />
-              {opt}
-            </button>
-          );
-        })}
-      </div>
-      <button disabled={!selected} onClick={() => selected && onConfirm(`Contract type: ${selected}`)}
-        style={{ width: "100%", background: selected ? DARK : "#E4E4E2", color: selected ? "white" : "#B0B0B0", border: "none", borderRadius: 10, padding: "11px", fontSize: 14, fontWeight: 500, cursor: selected ? "pointer" : "not-allowed", fontFamily: "Inter, sans-serif" }}>
-        Confirm
-      </button>
-    </motion.div>
-  );
-}
-
-// ─── Contact info form bar ────────────────────────────────────────────────────
-
-function ContactFormBar({ onConfirm }: { onConfirm: (value: string) => void }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [website, setWebsite] = useState("");
-  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
-
-  const handleSubmit = () => {
-    const e: { name?: string; email?: string } = {};
-    if (!name.trim()) e.name = "Required";
-    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) e.email = "Valid email required";
-    if (Object.keys(e).length) { setErrors(e); return; }
-    const parts = [`Name: ${name.trim()}`, `Email: ${email.trim()}`];
-    if (website.trim()) parts.push(`Company website: ${website.trim()}`);
-    onConfirm(parts.join(", "));
-  };
-
-  const fieldStyle = (hasError?: boolean): React.CSSProperties => ({
-    width: "100%",
-    border: `1px solid ${hasError ? "#E05050" : "#E0E0DE"}`,
-    borderRadius: 8,
-    padding: "9px 12px",
-    fontSize: 14,
-    fontFamily: "Inter, sans-serif",
-    outline: "none",
-    background: "white",
-    boxSizing: "border-box",
-    transition: "border-color 0.2s",
-  });
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      style={{
-        background: "rgba(26,122,74,0.05)",
-        border: "1px solid rgba(26,122,74,0.16)",
-        borderRadius: 18,
-        padding: "22px 24px",
-        maxWidth: 480,
-        fontFamily: "Inter, sans-serif",
-      }}
-    >
-      <p style={{ fontSize: 13, color: "#6B6B6B", marginBottom: 18, fontWeight: 500 }}>
-        Fill in your details to complete the intake
-      </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <div>
-          <label style={{ fontSize: 12, fontWeight: 600, color: "#4A4A4A", display: "block", marginBottom: 5 }}>
-            Full Name <span style={{ color: ACCENT }}>*</span>
-          </label>
-          <input
-            value={name}
-            onChange={e => { setName(e.target.value); setErrors(prev => ({ ...prev, name: undefined })); }}
-            onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }}
-            placeholder="Jane Smith"
-            style={fieldStyle(!!errors.name)}
-            onFocus={e => { e.target.style.borderColor = ACCENT; }}
-            onBlur={e => { e.target.style.borderColor = errors.name ? "#E05050" : "#E0E0DE"; }}
-          />
-          {errors.name && <span style={{ fontSize: 11, color: "#E05050", marginTop: 3, display: "block" }}>{errors.name}</span>}
-        </div>
-        <div>
-          <label style={{ fontSize: 12, fontWeight: 600, color: "#4A4A4A", display: "block", marginBottom: 5 }}>
-            Work Email <span style={{ color: ACCENT }}>*</span>
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={e => { setEmail(e.target.value); setErrors(prev => ({ ...prev, email: undefined })); }}
-            onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }}
-            placeholder="jane@company.com"
-            style={fieldStyle(!!errors.email)}
-            onFocus={e => { e.target.style.borderColor = ACCENT; }}
-            onBlur={e => { e.target.style.borderColor = errors.email ? "#E05050" : "#E0E0DE"; }}
-          />
-          {errors.email && <span style={{ fontSize: 11, color: "#E05050", marginTop: 3, display: "block" }}>{errors.email}</span>}
-        </div>
-        <div>
-          <label style={{ fontSize: 12, fontWeight: 600, color: "#4A4A4A", display: "block", marginBottom: 5 }}>
-            Company Website <span style={{ color: "#B0B0B0", fontWeight: 400 }}>(optional)</span>
-          </label>
-          <input
-            value={website}
-            onChange={e => setWebsite(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }}
-            placeholder="company.com"
-            style={fieldStyle()}
-            onFocus={e => { e.target.style.borderColor = ACCENT; }}
-            onBlur={e => { e.target.style.borderColor = "#E0E0DE"; }}
-          />
-        </div>
-      </div>
-      <button
-        onClick={handleSubmit}
-        style={{
-          width: "100%",
-          marginTop: 18,
-          background: DARK,
-          color: "white",
-          border: "none",
-          borderRadius: 10,
-          padding: "12px",
-          fontSize: 14,
-          fontWeight: 600,
-          cursor: "pointer",
-          fontFamily: "Inter, sans-serif",
-          transition: "background 0.2s",
-          letterSpacing: "-0.01em",
-        }}
-        onMouseEnter={e => { e.currentTarget.style.background = ACCENT; }}
-        onMouseLeave={e => { e.currentTarget.style.background = DARK; }}
-      >
-        Submit details →
-      </button>
-    </motion.div>
-  );
-}
-
-// ─── Section 1: Hiring Brief Sidebar (redesigned, no emojis) ─────────────────
-
-interface BriefField { label: string; value: string | string[] | undefined; }
-
-function buildSidebarFields(brief: HiringBrief | null, spec: CandidateSpec): BriefField[] {
+function buildSidebarFields(brief: HiringBrief | null, spec: CandidateSpec): SidebarField[] {
   if (brief) {
     return [
-      { label: "Company Context",       value: brief.companyContext },
-      { label: "Hiring Motivation",     value: brief.hiringMotivation },
-      { label: "The Role",              value: brief.role },
-      { label: "Seniority & Ownership", value: brief.seniorityOwnership },
-      { label: "Reporting Structure",   value: brief.reportingStructure },
-      { label: "Success Metrics",       value: brief.successMetrics },
-      { label: "Must-Haves",            value: brief.mustHaves },
-      { label: "Nice-to-Haves",         value: brief.niceToHaves },
-      { label: "Deal Breakers",         value: brief.dealBreakers },
-      { label: "Technical Requirements", value: brief.technicalRequirements },
-      { label: "Work Style & Culture",  value: brief.workStyleCulture },
-      { label: "Compensation",          value: brief.compensationModel },
-      { label: "Interview Process",     value: brief.interviewProcess },
-      { label: "Decision Chain",        value: brief.decisionChain },
-      { label: "Candidate Pitch",       value: brief.candidatePitch },
-      { label: "Risk Register",         value: brief.riskRegister },
-      { label: "Assumption Log",        value: brief.assumptionLog },
-      { label: "Past Hiring Signal",    value: brief.pastHiringSignal },
-      { label: "Timeline",              value: brief.timeline },
-      { label: "Budget",                value: brief.budget },
-      { label: "Contact",               value: brief.contact },
-      { label: "Open Flags",            value: brief.openFlags },
-    ].filter(f => f.value && String(f.value).trim().length > 0);
+      { label: "Company", value: brief.companyContext || "" },
+      { label: "Role", value: brief.role || "" },
+      { label: "Seniority", value: brief.seniorityOwnership || "" },
+      { label: "Must-Haves", value: brief.mustHaves || "" },
+      { label: "Nice-to-Haves", value: brief.niceToHaves || "" },
+      { label: "Tech Requirements", value: brief.technicalRequirements || "" },
+      { label: "Work Style", value: brief.workStyleCulture || "" },
+      { label: "Compensation", value: brief.compensationModel || "" },
+      { label: "Timeline", value: brief.timeline || "" },
+      { label: "Contact", value: brief.contact || "" },
+    ];
   }
+
   return [
-    { label: "Company", value: spec.company },
-    { label: "Role", value: spec.role },
-    { label: "Seniority", value: spec.seniority },
-    { label: "Tech Stack", value: spec.techStack },
-    { label: "Engagement", value: spec.contractType },
-    { label: "Work Style", value: spec.workStyle },
-    { label: "Timeline", value: spec.timeline },
-    { label: "Budget", value: spec.budget },
-    { label: "Contact", value: spec.contact },
+    { label: "Company", value: (spec.companyContext as string) || "" },
+    { label: "Role", value: (spec.role as string) || "" },
+    { label: "Seniority", value: (spec.seniorityOwnership as string) || "" },
+    { label: "Must-Haves", value: (spec.mustHaves as string | string[]) || "" },
+    { label: "Tech Stack", value: (spec.techStack as string | string[]) || "" },
+    { label: "Timeline", value: (spec.timeline as string) || "" },
+    { label: "Compensation", value: (spec.compensationModel as string) || "" },
+    { label: "Work Style", value: (spec.workStyleCulture as string) || "" },
+    { label: "Contact", value: (spec.contact as string) || "" },
   ];
 }
+
+// ─── PDF Generation Function ──────────────────────────────────────────────────
+
+async function generatePDFFromBrief(brief: HiringBrief): Promise<void> {
+  try {
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    let yPosition = 15;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const lineHeight = 7;
+
+    // Helper function to add field with word wrap
+    const addField = (label: string, value: string | undefined) => {
+      if (!value) return;
+      const labelLines = doc.splitTextToSize(`${label}:`, 170);
+      const valueLines = doc.splitTextToSize(value, 170);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(labelLines, margin, yPosition);
+      yPosition += labelLines.length * lineHeight + 2;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text(valueLines, margin, yPosition);
+      yPosition += valueLines.length * lineHeight + 6;
+
+      // Page break check
+      if (yPosition > pageHeight - margin) {
+        doc.addPage();
+        yPosition = margin;
+      }
+    };
+
+    // Title
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("Hiring Brief", margin, yPosition);
+    yPosition += 12;
+
+    // Add all fields
+    addField("Company Context", brief.companyContext);
+    addField("Hiring Motivation", brief.hiringMotivation);
+    addField("Role", brief.role);
+    addField("Seniority & Ownership", brief.seniorityOwnership);
+    addField("Reporting Structure", brief.reportingStructure);
+    addField("Success Metrics", brief.successMetrics);
+    addField("Candidate Profile — Must-Haves", brief.mustHaves);
+    addField("Candidate Profile — Nice-to-Haves", brief.niceToHaves);
+    addField("Deal Breakers", brief.dealBreakers);
+    addField("Technical Requirements", brief.technicalRequirements);
+    addField("Work Style & Culture", brief.workStyleCulture);
+    addField("Compensation Model", brief.compensationModel);
+    addField("Interview Process", brief.interviewProcess);
+    addField("Decision Chain", brief.decisionChain);
+    addField("Candidate Pitch", brief.candidatePitch);
+    addField("Recruiting Strategy", brief.recruitingStrategy);
+    addField("Risk Register", brief.riskRegister);
+    addField("Assumption Log", brief.assumptionLog);
+    addField("Past Hiring Signal", brief.pastHiringSignal);
+    addField("Timeline", brief.timeline);
+    addField("Budget", brief.budget);
+    addField("Contact", brief.contact);
+    addField("Open Questions or Flags", brief.openFlags);
+
+    // Download
+    doc.save("hiring-brief.pdf");
+  } catch (err) {
+    console.error("PDF generation failed:", err);
+  }
+}
+
+// ─── Sidebar Components ───────────────────────────────────────────────────────
 
 function HiringBriefSidebar({ spec, hiringBrief, visible }: { spec: CandidateSpec; hiringBrief: HiringBrief | null; visible: boolean }) {
   const fields = buildSidebarFields(hiringBrief, spec);
@@ -622,48 +426,42 @@ function HiringBriefSidebar({ spec, hiringBrief, visible }: { spec: CandidateSpe
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 24 }}
           transition={{ duration: 0.25 }}
-          style={{
-            width: 290,
-            flexShrink: 0,
-            borderLeft: "1px solid rgba(0,0,0,0.07)",
-            background: "#FFFFFF",
-            overflowY: "auto",
-            fontFamily: "Inter, sans-serif",
-          }}
+          className="hidden lg:flex flex-col w-72 flex-shrink-0 border-l border-gray-200 bg-white overflow-y-auto"
         >
           {/* Header */}
-          <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #F0F0EE" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <span style={{ fontSize: 10, fontWeight: 600, color: "#9B9B9B", textTransform: "uppercase", letterSpacing: "0.10em" }}>
+          <div className="p-5 border-b border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 Hiring Brief
               </span>
               {isComplete ? (
-                <span style={{ fontSize: 10, fontWeight: 500, color: ACCENT, background: "rgba(26,122,74,0.08)", padding: "2px 8px", borderRadius: 20, border: "1px solid rgba(26,122,74,0.15)" }}>
+                <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200">
                   Complete
                 </span>
               ) : (
-                <span style={{ fontSize: 11, color: ACCENT, fontWeight: 500 }}>{progress}%</span>
+                <span className="text-xs font-medium text-green-600">{progress}%</span>
               )}
             </div>
-            <div style={{ height: 2, background: "#F0F0EE", borderRadius: 1 }}>
+            <div className="h-0.5 bg-gray-200 rounded-full overflow-hidden">
               <motion.div
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.5 }}
-                style={{ height: "100%", background: `linear-gradient(90deg, ${ACCENT}, #34D399)`, borderRadius: 1 }}
+                className="h-full bg-gradient-to-r from-green-600 to-green-400"
               />
             </div>
           </div>
 
           {/* Fields */}
-          <div style={{ padding: "16px 20px 24px" }}>
+          <div className="p-5 space-y-4">
             {filled.length === 0 && (
-              <p style={{ fontSize: 12, color: "#C0C0C0", lineHeight: 1.7, marginTop: 4 }}>
+              <p className="text-xs text-gray-400 leading-relaxed mt-1">
                 Fields will populate as you chat. Start by describing your company.
               </p>
             )}
 
             {filled.map((field, i) => {
               const value = field.value;
+              const displayValue = Array.isArray(value) ? value.join(", ") : String(value).slice(0, 60) + (String(value).length > 60 ? "..." : "");
               return (
                 <motion.div
                   key={field.label}
@@ -671,53 +469,14 @@ function HiringBriefSidebar({ spec, hiringBrief, visible }: { spec: CandidateSpe
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.04 }}
                 >
-                  {i > 0 && <div style={{ height: 1, background: "#F4F4F2", margin: "14px 0" }} />}
-                  <div style={{ marginBottom: 0 }}>
-                    <p style={{ fontSize: 9, color: "#ABABAB", textTransform: "uppercase", letterSpacing: "0.10em", fontWeight: 600, marginBottom: 5 }}>
-                      {field.label}
-                    </p>
-                    {Array.isArray(value) ? (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                        {(value as string[]).map(tag => (
-                          <span key={tag} style={{
-                            background: "rgba(26,122,74,0.07)",
-                            color: ACCENT,
-                            borderRadius: 20,
-                            padding: "3px 10px",
-                            fontSize: 11,
-                            fontWeight: 500,
-                            border: "1px solid rgba(26,122,74,0.12)",
-                          }}>
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <p style={{ fontSize: 13, color: "#1A1A1A", lineHeight: 1.65, fontWeight: 400, margin: 0 }}>
-                        {String(value)}
-                      </p>
-                    )}
+                  {i > 0 && <div className="h-px bg-gray-100 my-3" />}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 mb-1">{field.label}</p>
+                    <p className="text-xs text-gray-500 leading-relaxed">{displayValue}</p>
                   </div>
                 </motion.div>
               );
             })}
-
-            {!isComplete && filled.length > 0 && filled.length < 9 && (
-              <div style={{ marginTop: 20, paddingTop: 14, borderTop: "1px solid #F0F0EE" }}>
-                <p style={{ fontSize: 9, color: "#D0D0D0", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 8 }}>
-                  Still gathering
-                </p>
-                {buildSidebarFields(null, spec)
-                  .filter(f => !f.value || (Array.isArray(f.value) ? f.value.length === 0 : !f.value.trim()))
-                  .map(field => (
-                    <div key={field.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7, opacity: 0.4 }}>
-                      <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#D0D0D0", flexShrink: 0 }} />
-                      <span style={{ fontSize: 12, color: "#B0B0B0" }}>{field.label}</span>
-                    </div>
-                  ))
-                }
-              </div>
-            )}
           </div>
         </motion.div>
       )}
@@ -725,385 +484,254 @@ function HiringBriefSidebar({ spec, hiringBrief, visible }: { spec: CandidateSpe
   );
 }
 
-// ─── Chat components ──────────────────────────────────────────────────────────
+// Mobile Sidebar Drawer
+function SidebarDrawer({ spec, hiringBrief, visible, onClose }: { spec: CandidateSpec; hiringBrief: HiringBrief | null; visible: boolean; onClose: () => void }) {
+  const fields = buildSidebarFields(hiringBrief, spec);
+  const filled = fields.filter(f => f.value && (Array.isArray(f.value) ? f.value.length > 0 : String(f.value).trim().length > 0));
+  const progress = hiringBrief ? 100 : Math.round((filled.length / 9) * 100);
 
-function TypingDots() {
   return (
-    <div className="flex items-start gap-3">
-      <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden"
-        style={{ background: AI_BUBBLE_BG, border: `1px solid ${AI_BUBBLE_BORDER}` }}>
-        <img src={logoImage} alt="Bridgix" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-      </div>
-      <div className="flex items-center gap-1.5" style={{ background: AI_BUBBLE_BG, border: `1px solid ${AI_BUBBLE_BORDER}`, borderRadius: "6px 18px 18px 18px", padding: "14px 20px" }}>
-        {[0, 1, 2].map(i => (
-          <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: ACCENT, opacity: 0.5, animation: "bounce-dot 1.2s ease infinite", animationDelay: `${i * 0.22}s` }} />
-        ))}
-      </div>
-    </div>
+    <AnimatePresence>
+      {visible && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black bg-opacity-40 z-40 lg:hidden"
+          />
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 20 }}
+            className="fixed right-0 top-0 bottom-0 w-80 bg-white shadow-lg z-50 lg:hidden flex flex-col overflow-y-auto"
+          >
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="font-semibold text-gray-900">Hiring Brief</h3>
+              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 space-y-4 flex-1">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-gray-500 uppercase">{progress}%</span>
+              </div>
+              <div className="h-1 bg-gray-200 rounded-full overflow-hidden mb-4">
+                <div className="h-full bg-gradient-to-r from-green-600 to-green-400" style={{ width: `${progress}%` }} />
+              </div>
+              {filled.map((field) => {
+                const value = field.value;
+                const displayValue = Array.isArray(value) ? value.join(", ") : String(value);
+                return (
+                  <div key={field.label} className="pb-3 border-b border-gray-100">
+                    <p className="text-xs font-semibold text-gray-600 mb-1">{field.label}</p>
+                    <p className="text-xs text-gray-500 line-clamp-2">{displayValue}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }
 
-function useTypewriter(text: string, speed = 14, active = true) {
-  const [displayed, setDisplayed] = useState(active ? "" : text);
+// ─── Message Bubbles ──────────────────────────────────────────────────────────
+
+function AiBubble({ content, onExtractEmail }: { content: string; onExtractEmail?: (email: string) => void }) {
   useEffect(() => {
-    if (!active) { setDisplayed(text); return; }
-    setDisplayed("");
-    let i = 0;
-    const id = setInterval(() => {
-      i++;
-      setDisplayed(text.slice(0, i));
-      if (i >= text.length) clearInterval(id);
-    }, speed);
-    return () => clearInterval(id);
-  }, [text, speed, active]);
-  return displayed;
-}
+    const match = content.match(EMAIL_REGEX);
+    if (match && onExtractEmail) {
+      onExtractEmail(match[0]);
+    }
+  }, [content, onExtractEmail]);
 
-// Section 3: AI bubble — darker forest green
-function AIBubble({ content, isLatest }: { content: string; isLatest: boolean }) {
-  const text = useTypewriter(content, 14, isLatest);
+  const cleanContent = stripContactFormSignal(content);
+
   return (
-    <div className="flex items-start gap-3">
-      <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5 overflow-hidden"
-        style={{ background: AI_BUBBLE_BG, border: `1px solid ${AI_BUBBLE_BORDER}` }}>
-        <img src={logoImage} alt="Bridgix" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-      </div>
-      <div style={{ background: AI_BUBBLE_BG, border: `1px solid ${AI_BUBBLE_BORDER}`, borderRadius: "6px 18px 18px 18px", padding: "14px 20px", fontSize: 17, color: DARK, lineHeight: 1.65, fontFamily: "Inter, sans-serif", fontWeight: 500, maxWidth: "78%" }}>
-        {isLatest ? text : content}
-      </div>
+    <div
+      style={{
+        alignSelf: "flex-start",
+        maxWidth: "70%",
+        padding: "12px 16px",
+        borderRadius: 12,
+        backgroundColor: AI_BUBBLE_BG,
+        border: `1px solid ${AI_BUBBLE_BORDER}`,
+        color: DARK,
+        fontSize: 14,
+        lineHeight: 1.5,
+        wordWrap: "break-word",
+      }}
+    >
+      {cleanContent}
     </div>
   );
 }
 
-// Section 3: User bubble — light mint green
 function UserBubble({ content }: { content: string }) {
   return (
-    <div className="flex items-end justify-end gap-3">
-      <div style={{ background: USER_BUBBLE_BG, border: `1px solid ${USER_BUBBLE_BORDER}`, borderRadius: "18px 6px 18px 18px", padding: "14px 20px", fontSize: 17, color: DARK, lineHeight: 1.65, fontFamily: "Inter, sans-serif", fontWeight: 500, maxWidth: "72%" }}>
-        {content}
-      </div>
+    <div
+      style={{
+        alignSelf: "flex-end",
+        maxWidth: "70%",
+        padding: "12px 16px",
+        borderRadius: 12,
+        backgroundColor: USER_BUBBLE_BG,
+        border: `1px solid ${USER_BUBBLE_BORDER}`,
+        color: DARK,
+        fontSize: 14,
+        lineHeight: 1.5,
+        wordWrap: "break-word",
+      }}
+    >
+      {content}
     </div>
   );
 }
 
-// ─── Doc 2: Editable Hiring Brief Review screen ───────────────────────────────
+// ─── Review Panel ─────────────────────────────────────────────────────────────
 
 const BRIEF_REVIEW_FIELDS: { key: keyof HiringBrief; label: string; hint: string }[] = [
-  { key: "companyContext",       label: "Company Context",          hint: "Stage, team size, product description, the problem it solves" },
-  { key: "hiringMotivation",     label: "Hiring Motivation",        hint: "Why this role exists right now — the business urgency or catalyst" },
-  { key: "role",                 label: "The Role",                 hint: "Title, responsibilities, new or replacement, week one and month one" },
-  { key: "seniorityOwnership",   label: "Seniority & Ownership",    hint: "Experience required, what they own, autonomy, whether they manage anyone" },
-  { key: "reportingStructure",   label: "Reporting Structure",      hint: "Who they report to, team size and shape, management expectations" },
-  { key: "successMetrics",       label: "Success Metrics",          hint: "30-day, 60-day, 90-day, and 1-year outcomes for this hire" },
-  { key: "mustHaves",            label: "Must-Haves",               hint: "Non-negotiable technical and human requirements" },
-  { key: "niceToHaves",          label: "Nice-to-Haves",            hint: "Desired but non-blocking attributes" },
-  { key: "dealBreakers",         label: "Deal Breakers",            hint: "What would immediately disqualify a candidate" },
-  { key: "technicalRequirements", label: "Technical Requirements",  hint: "Must-have tech skills, nice-to-have tech skills, stack specifics" },
-  { key: "workStyleCulture",     label: "Work Style & Culture",     hint: "Remote/hybrid/in-office, timezone, async vs sync, team dynamic" },
-  { key: "compensationModel",    label: "Compensation Model",       hint: "Salary range, equity, benefits, visa sponsorship" },
-  { key: "interviewProcess",     label: "Interview Process",        hint: "Rounds, who conducts each stage, evaluation criteria, decision maker" },
-  { key: "decisionChain",        label: "Decision Chain",           hint: "Who makes the final call, other stakeholders, timeline from offer to decision" },
-  { key: "candidatePitch",       label: "Candidate Pitch",          hint: "Why a strong engineer should choose this role over competing options" },
-  { key: "recruitingStrategy",   label: "Recruiting Strategy",      hint: "Target profile, sourcing channels, referral opportunities, constraints" },
-  { key: "riskRegister",         label: "Risk Register",            hint: "Known risks: budget mismatch, timeline pressure, unclear scope" },
-  { key: "assumptionLog",        label: "Assumption Log",           hint: "What was inferred vs explicitly stated, with recruiting implications" },
-  { key: "pastHiringSignal",     label: "Past Hiring Signal",       hint: "Prior experience with this hire, what went wrong, founder concerns" },
-  { key: "timeline",             label: "Timeline",                 hint: "Urgency level, target start date, consequence of delay" },
-  { key: "budget",               label: "Budget",                   hint: "Salary range, equity, any mismatch flag with seniority" },
-  { key: "contact",              label: "Contact",                  hint: "Name, role, email, company website" },
-  { key: "openFlags",            label: "Open Flags",               hint: "Unresolved items, contradictions, risks before sourcing begins" },
+  { key: "companyContext", label: "Company Context", hint: "Company name, stage, what you do" },
+  { key: "hiringMotivation", label: "Hiring Motivation", hint: "Why are you hiring now?" },
+  { key: "role", label: "Role", hint: "Job title and responsibilities" },
+  { key: "seniorityOwnership", label: "Seniority & Ownership", hint: "IC vs. management, decision-making" },
+  { key: "reportingStructure", label: "Reporting Structure", hint: "Who do they report to?" },
+  { key: "successMetrics", label: "Success Metrics", hint: "How to measure 6-month success" },
+  { key: "mustHaves", label: "Must-Haves", hint: "Non-negotiable skills" },
+  { key: "niceToHaves", label: "Nice-to-Haves", hint: "Bonus experience" },
+  { key: "dealBreakers", label: "Deal Breakers", hint: "Disqualifying factors" },
+  { key: "technicalRequirements", label: "Technical Requirements", hint: "Languages, frameworks, tools" },
+  { key: "workStyleCulture", label: "Work Style & Culture", hint: "Remote? Pace? Communication?" },
+  { key: "compensationModel", label: "Compensation", hint: "Salary, equity, benefits" },
+  { key: "interviewProcess", label: "Interview Process", hint: "Number of rounds, who, timeline" },
+  { key: "decisionChain", label: "Decision Chain", hint: "Who decides? How long?" },
+  { key: "candidatePitch", label: "Candidate Pitch", hint: "Why candidates should want this role" },
+  { key: "recruitingStrategy", label: "Recruiting Strategy", hint: "Where to source candidates" },
+  { key: "riskRegister", label: "Risk Register", hint: "Hiring risks" },
+  { key: "assumptionLog", label: "Assumption Log", hint: "Untested assumptions" },
+  { key: "pastHiringSignal", label: "Past Hiring Signal", hint: "Your last great hire" },
+  { key: "timeline", label: "Timeline", hint: "When do you need someone?" },
+  { key: "budget", label: "Budget", hint: "Total compensation budget" },
+  { key: "contact", label: "Contact", hint: "Name, email, title, company, website" },
+  { key: "openFlags", label: "Open Questions", hint: "Anything else we should know?" },
 ];
 
-function HiringBriefReview({
-  brief,
-  onConfirm,
-  saving,
-}: {
-  brief: HiringBrief;
-  onConfirm: (edited: HiringBrief) => void;
-  saving: boolean;
-}) {
-  const [editing, setEditing] = useState<HiringBrief>({ ...brief });
-  const [downloading, setDownloading] = useState(false);
+function HiringBriefReview({ brief, onConfirm, isSaving }: { brief: HiringBrief; onConfirm: (edited: HiringBrief) => void; isSaving: boolean }) {
+  const [edited, setEdited] = useState(brief);
+  const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
 
-  const update = (key: keyof HiringBrief, value: string) => {
-    setEditing(prev => ({ ...prev, [key]: value }));
+  const toggleExpand = (fieldKey: string) => {
+    const newSet = new Set(expandedFields);
+    if (newSet.has(fieldKey)) {
+      newSet.delete(fieldKey);
+    } else {
+      newSet.add(fieldKey);
+    }
+    setExpandedFields(newSet);
   };
 
-  const downloadPdf = async () => {
-    if (downloading) return;
-    setDownloading(true);
-    try {
-      const res = await fetch(apiEndpoint("/api/generate-pdf"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brief: editing }),
-      });
-      if (!res.ok) {
-        const err = await res.json() as { message?: string };
-        alert(err.message ?? "Could not generate PDF. Check that all required fields are filled.");
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "hiring-brief.pdf";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch {
-      alert("Failed to download PDF. Please try again.");
-    } finally {
-      setDownloading(false);
-    }
+  const handleFieldChange = (key: keyof HiringBrief, value: string) => {
+    setEdited(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleDownloadPDF = async () => {
+    await generatePDFFromBrief(edited);
   };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      style={{
-        maxWidth: 720,
-        margin: "0 auto",
-        padding: "0 24px 80px",
-        fontFamily: "Inter, sans-serif",
-      }}
+      exit={{ opacity: 0, y: 20 }}
+      className="w-full max-w-2xl mx-auto px-4 py-6 space-y-6"
     >
-      {/* Header */}
-      <div style={{ paddingTop: 40, paddingBottom: 32 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(26,122,74,0.10)", border: "1px solid rgba(26,122,74,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M9 12l2 2 4-4" stroke={ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0z" stroke={ACCENT} strokeWidth="2"/>
-            </svg>
-          </div>
-          <div>
-            <p style={{ fontSize: 10, fontWeight: 600, color: "#9B9B9B", textTransform: "uppercase", letterSpacing: "0.10em", marginBottom: 2 }}>Review &amp; Confirm</p>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: DARK, letterSpacing: "-0.03em", lineHeight: 1 }}>Your Hiring Brief</h2>
-          </div>
-        </div>
-        <p style={{ fontSize: 14, color: "#6B6B6B", lineHeight: 1.65, maxWidth: 560, fontWeight: 300 }}>
-          Check everything looks right. Edit any field directly before sending to the team — your edits are what gets saved.
-        </p>
-        <div style={{ height: 1, background: "linear-gradient(90deg, rgba(26,122,74,0.3), rgba(52,211,153,0.2), transparent)", marginTop: 24 }} />
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Review Your Hiring Brief</h2>
+        <p className="text-sm text-gray-600">Edit any field that doesn't look right, then submit to send to the recruiting team.</p>
       </div>
 
-      {/* Editable fields */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-        {BRIEF_REVIEW_FIELDS.map((field, i) => {
-          const value = editing[field.key] as string;
-          if (!value && field.key === "openFlags") return null;
+      {/* Fields Grid */}
+      <div className="space-y-3">
+        {BRIEF_REVIEW_FIELDS.map((field) => {
+          const value = edited[field.key] || "";
+          const isExpanded = expandedFields.has(field.key);
+
           return (
-            <div key={field.key}>
-              {i > 0 && <div style={{ height: 1, background: "#F0F0EE" }} />}
-              <div style={{ padding: "20px 0" }}>
-                <div style={{ marginBottom: 8 }}>
-                  <label style={{ fontSize: 10, fontWeight: 600, color: "#9B9B9B", textTransform: "uppercase", letterSpacing: "0.10em", display: "block", marginBottom: 2 }}>
-                    {field.label}
-                  </label>
-                  <p style={{ fontSize: 11, color: "#C0C0C0", margin: 0 }}>{field.hint}</p>
+            <div key={field.key} className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => toggleExpand(field.key)}
+                className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition"
+              >
+                <div className="text-left flex-1">
+                  <p className="font-semibold text-sm text-gray-900">{field.label}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{value ? value.slice(0, 50) + (value.length > 50 ? "..." : "") : "Not filled"}</p>
                 </div>
-                <textarea
-                  value={value}
-                  onChange={e => update(field.key, e.target.value)}
-                  rows={value && value.length > 120 ? 4 : 2}
-                  placeholder={`Edit ${field.label.toLowerCase()}...`}
-                  style={{
-                    width: "100%",
-                    border: "1px solid #E8E8E8",
-                    borderRadius: 10,
-                    padding: "12px 14px",
-                    fontSize: 14,
-                    color: DARK,
-                    fontFamily: "Inter, sans-serif",
-                    lineHeight: 1.6,
-                    resize: "vertical",
-                    outline: "none",
-                    background: "#FAFAF8",
-                    boxSizing: "border-box",
-                    transition: "border-color 0.2s, box-shadow 0.2s",
-                  }}
-                  onFocus={e => { e.target.style.borderColor = ACCENT; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
-                  onBlur={e => { e.target.style.borderColor = "#E8E8E8"; e.target.style.boxShadow = "none"; }}
-                />
-              </div>
+                {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </button>
+
+              {isExpanded && (
+                <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                  <textarea
+                    value={value}
+                    onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                    placeholder={field.hint}
+                    className="w-full p-3 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    rows={4}
+                  />
+                </div>
+              )}
             </div>
           );
         })}
       </div>
 
-      {/* Confirm + Download buttons */}
-      <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid #F0F0EE" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <button
-            onClick={() => onConfirm(editing)}
-            disabled={saving}
-            style={{
-              background: saving ? "#9B9B9B" : `linear-gradient(135deg, ${ACCENT}, #2A9D5C)`,
-              color: "white", border: "none", borderRadius: 12,
-              padding: "14px 32px", fontSize: 15, fontWeight: 600,
-              cursor: saving ? "wait" : "pointer", fontFamily: "Inter, sans-serif",
-              boxShadow: saving ? "none" : "0 4px 20px rgba(26,122,74,0.30)",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={e => { if (!saving) { e.currentTarget.style.boxShadow = "0 6px 28px rgba(26,122,74,0.45)"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow = saving ? "none" : "0 4px 20px rgba(26,122,74,0.30)"; e.currentTarget.style.transform = "none"; }}
-          >
-            {saving ? "Sending..." : "Looks good, send to the team →"}
-          </button>
-          <button
-            onClick={downloadPdf}
-            disabled={downloading}
-            style={{
-              background: "white", color: DARK, border: `1.5px solid #E8E8E8`,
-              borderRadius: 12, padding: "14px 24px", fontSize: 14, fontWeight: 500,
-              cursor: downloading ? "wait" : "pointer", fontFamily: "Inter, sans-serif",
-              display: "flex", alignItems: "center", gap: 7, transition: "all 0.2s",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.color = ACCENT; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "#E8E8E8"; e.currentTarget.style.color = DARK; }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            {downloading ? "Generating..." : "Download PDF"}
-          </button>
-        </div>
-        <p style={{ fontSize: 12, color: "#B0B0B0", marginTop: 10 }}>
-          Profiles in your inbox within 5-7 days.
-        </p>
+      {/* Action Buttons */}
+      <div className="flex gap-3 justify-center pt-4">
+        <button
+          onClick={handleDownloadPDF}
+          disabled={isSaving}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition disabled:opacity-50"
+        >
+          <DownloadCloud size={16} />
+          Download PDF
+        </button>
+        <button
+          onClick={() => onConfirm(edited)}
+          disabled={isSaving}
+          className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+        >
+          {isSaving ? <Loader size={16} className="animate-spin" /> : <Send size={16} />}
+          {isSaving ? "Sending..." : "Confirm & Send"}
+        </button>
       </div>
     </motion.div>
   );
 }
 
-// ─── Completion panel ─────────────────────────────────────────────────────────
+// ─── Main ChatModal Component ───────────────────────────────────────────────────
 
-function CompletionPanel() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="flex flex-col items-center text-center px-8 py-12"
-      style={{ background: "linear-gradient(135deg, rgba(26,122,74,0.04) 0%, transparent 100%)", borderRadius: 20, border: "1px solid rgba(26,122,74,0.10)" }}
-    >
-      <div style={{ width: 52, height: 52, borderRadius: 14, background: "rgba(26,122,74,0.10)", border: "1px solid rgba(26,122,74,0.18)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path d="M20 6L9 17L4 12" stroke={ACCENT} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </div>
-      <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 20, color: DARK, marginBottom: 8 }}>
-        We're on it.
-      </p>
-      <p style={{ fontFamily: "Inter, sans-serif", fontSize: 15, color: "#6B6B6B", lineHeight: 1.65, maxWidth: 320 }}>
-        Your brief is confirmed. Expect a handpicked shortlist in your inbox within 5-7 days.
-      </p>
-      <motion.div
-        style={{ width: "100%", maxWidth: 280, height: 3, background: `linear-gradient(90deg, ${ACCENT}, #34D399)`, borderRadius: 2, marginTop: 24 }}
-        initial={{ scaleX: 0, originX: 0 }}
-        animate={{ scaleX: 1 }}
-        transition={{ duration: 1.8, ease: "easeOut", delay: 0.3 }}
-      />
-    </motion.div>
-  );
-}
-
-// ─── Recovery bar (load completed intake by email) ────────────────────────────
-
-function RecoveryBar({ onLoad, hidden }: { onLoad: (msgs: Message[]) => void; hidden: boolean }) {
-  const [email, setEmail] = useState("");
-  const [state, setState] = useState<"idle" | "loading" | "not_found" | "error" | "already_complete">("idle");
-
-  if (hidden) return null;
-
-  const handleLoad = async () => {
-    const trimmed = email.trim();
-    if (!trimmed) return;
-    setState("loading");
-    try {
-      const data = await loadCompletedChatFromSupabase(trimmed);
-      if (data.found && data.messages && data.messages.length > 0) {
-        if (data.intakeSummary) {
-          setState("already_complete");
-          return;
-        }
-        onLoad(data.messages);
-        setState("idle");
-      } else {
-        setState("not_found");
-        setTimeout(() => setState("idle"), 3000);
-      }
-    } catch {
-      setState("error");
-      setTimeout(() => setState("idle"), 2500);
-    }
-  };
-
-  return (
-    <div style={{ background: "#F7F7F5", border: "1px solid #F0F0EE", padding: "12px 16px", marginBottom: 8, borderRadius: 12, fontFamily: "Inter, sans-serif" }}>
-      {state === "already_complete" ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: ACCENT, flexShrink: 0 }} />
-          <div>
-            <p style={{ fontSize: 13, color: DARK, fontWeight: 500, margin: 0 }}>Intake already completed</p>
-            <p style={{ fontSize: 12, color: "#6B6B6B", margin: "2px 0 0" }}>This intake is done — the Bridgix team already has your brief. <button onClick={() => setState("idle")} style={{ color: ACCENT, background: "none", border: "none", cursor: "pointer", fontSize: 12, padding: 0, fontFamily: "Inter, sans-serif" }}>Search again</button></p>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <span style={{ fontSize: 13, color: "#6B6B6B", fontWeight: 400, whiteSpace: "nowrap" }}>
-            Resume a previous intake?
-          </span>
-          <input
-            type="email"
-            value={email}
-            onChange={e => { setEmail(e.target.value); if (state !== "idle") setState("idle"); }}
-            placeholder="your@email.com"
-            style={{ border: `1px solid ${state === "not_found" ? "#ef4444" : "#E8E8E8"}`, borderRadius: 6, padding: "5px 11px", fontSize: 12, fontFamily: "Inter, sans-serif", width: 200, outline: "none", background: "white" }}
-            onKeyDown={e => { if (e.key === "Enter") handleLoad(); }}
-          />
-          <button
-            onClick={handleLoad}
-            disabled={state === "loading"}
-            style={{ background: DARK, color: "#FFFFFF", borderRadius: 6, padding: "5px 14px", fontSize: 12, fontFamily: "Inter, sans-serif", fontWeight: 500, cursor: "pointer", border: "none" }}
-            onMouseEnter={e => { e.currentTarget.style.background = ACCENT; }}
-            onMouseLeave={e => { e.currentTarget.style.background = DARK; }}
-          >
-            {state === "loading" ? "Looking..." : "Load"}
-          </button>
-          {state === "not_found" && <span style={{ fontSize: 11, color: "#ef4444" }}>No in-progress intake found for that email.</span>}
-          {state === "error" && <span style={{ fontSize: 11, color: "#ef4444" }}>Error loading. Try again.</span>}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Main ChatModal ───────────────────────────────────────────────────────────
-
-export function ChatModal({ open, onClose }: ChatModalProps) {
+export default function ChatModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [latestAiIndex, setLatestAiIndex] = useState(-1);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [complete, setComplete] = useState(false);
-  const [detectedEmail, setDetectedEmail] = useState<string | null>(null);
+  const [latestAiIndex, setLatestAiIndex] = useState(-1);
   const [sessionPhase, setSessionPhase] = useState<"init" | "continue_banner" | "chat" | "review">("init");
-  const [savedMessages, setSavedMessages] = useState<Message[] | null>(null);
+  const [detectedEmail, setDetectedEmail] = useState<string | null>(null);
   const [recoveryBarHidden, setRecoveryBarHidden] = useState(false);
-  const [greeting] = useState(() => getTimeGreeting());
+  const [savedMessages, setSavedMessages] = useState<Message[] | null>(null);
   const [isListening, setIsListening] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
-  const [interactiveUsed, setInteractiveUsed] = useState<Set<number>>(new Set());
+  const [interactiveUsed] = useState<Set<number>>(new Set());
   const [contactFormIndex, setContactFormIndex] = useState<number | null>(null);
   const [hiringBrief, setHiringBrief] = useState<HiringBrief | null>(null);
   const [reviewSaving, setReviewSaving] = useState(false);
   const [liveSpec, setLiveSpec] = useState<CandidateSpec>({});
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sessionId] = useState<string>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem(STORAGE_SESSION_ID_KEY);
@@ -1119,7 +747,8 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
   const spec = liveSpec;
 
-  // Section 5: microphone — no useCallback, synchronous recognition.start()
+  // ─── Microphone handler ──────────────────────────────────────────────────────
+
   function handleMicClick() {
     type SpeechRecognitionInstance = {
       continuous: boolean; interimResults: boolean; lang: string;
@@ -1156,7 +785,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
     recognitionRef.current = recognition;
     isListeningRef.current = true;
     setIsListening(true);
-    recognition.start(); // called synchronously inside click handler — no async gap
+    recognition.start();
   }
 
   const scrollToBottom = useCallback(() => {
@@ -1165,7 +794,8 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
   useEffect(() => { scrollToBottom(); }, [messages, loading, scrollToBottom]);
 
-  // On modal open/close
+  // ─── Modal open/close lifecycle ──────────────────────────────────────────────
+
   useEffect(() => {
     if (!open) {
       setSessionPhase("init");
@@ -1176,11 +806,11 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       setRecoveryBarHidden(false);
       setSavedMessages(null);
       setInput("");
-      setInteractiveUsed(new Set());
       setContactFormIndex(null);
       setHiringBrief(null);
       setReviewSaving(false);
       setShowSidebar(true);
+      setSidebarOpen(false);
       setLiveSpec({});
       return;
     }
@@ -1192,95 +822,10 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
       }
     }
 
-    // Track visitor session on modal open
-    const tz = getOrSetTimezone();
-    fetch(apiEndpoint("/api/track-session"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ timezone: tz }),
-    }).catch(() => {});
-
-    const loadSession = async () => {
-      try {
-        const data = await loadSessionFromSupabase(sessionId);
-        if (data.found && Array.isArray(data.messages) && data.messages.length > 0 && data.status === "in_progress") {
-          setSavedMessages(data.messages);
-          setSessionPhase("continue_banner");
-          return;
-        }
-      } catch {
-        // ignore and start fresh
-      }
-      startFresh();
-    };
-
-    loadSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  // Persist sessionId locally
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_SESSION_ID_KEY, sessionId);
-    }
-  }, [sessionId]);
-
-  // Detect email in conversation
-  useEffect(() => {
-    if (messages.length === 0) return;
-    const allText = messages.map(m => m.content).join(" ");
-    const match = allText.match(EMAIL_REGEX);
-    if (match && !detectedEmail) setDetectedEmail(match[0]);
-  }, [messages, detectedEmail]);
-
-  // Persist the active conversation directly in Supabase.
-  useEffect(() => {
-    if (messages.length === 0 || sessionPhase !== "chat") return;
-    void saveSessionToSupabase(sessionId, messages, detectedEmail ?? undefined);
-  }, [messages, detectedEmail, sessionPhase, sessionId]);
-
-  function startFresh() {
-    setMessages([]);
-    setComplete(false);
-    setLatestAiIndex(-1);
-    setDetectedEmail(null);
-    setRecoveryBarHidden(false);
-    setInteractiveUsed(new Set());
-    setContactFormIndex(null);
-    setHiringBrief(null);
-    setLiveSpec({});
     setSessionPhase("chat");
-    setTimeout(() => {
-      setMessages([{ role: "assistant", content: pickFirstMessage() }]);
-      setLatestAiIndex(0);
-    }, 400);
-  }
+  }, [open, sessionId]);
 
-  function continueSession() {
-    if (!savedMessages) return;
-    setMessages(savedMessages);
-    setLatestAiIndex(-1);
-    setSessionPhase("chat");
-    setSavedMessages(null);
-  }
-
-  function handleEmailLoad(msgs: Message[]) {
-    setMessages(msgs);
-    setLatestAiIndex(-1);
-    setSessionPhase("chat");
-  }
-
-  // Handle founder confirming the edited brief
-  async function handleBriefConfirm(edited: HiringBrief) {
-    setReviewSaving(true);
-    try {
-      await saveBriefToSupabase(sessionId, edited, detectedEmail ?? undefined);
-    } catch { /* non-fatal */ }
-    setHiringBrief(edited);
-    setReviewSaving(false);
-    setComplete(true);
-    setSessionPhase("chat");
-  }
+  // ─── Main sendMessage function ───────────────────────────────────────────────
 
   const sendMessage = useCallback(async (overrideText?: string) => {
     const text = (overrideText ?? input).trim();
@@ -1330,316 +875,204 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
       const reply: string = (payload as { choices?: Array<{ message?: { content?: string | null } }> }).choices?.[0]?.message?.content ?? "";
 
-      // Fire-and-forget: extract structured spec from the updated conversation
+      // FIXED: Fetch live spec from OpenRouter on each AI response
       if (reply && !reply.includes("INTAKE_COMPLETE")) {
         const fullConv = [...newMessages, { role: "assistant" as const, content: reply }];
         fetchLiveSpec(fullConv).then(extracted => {
-          if (Object.keys(extracted).length > 0) setLiveSpec(extracted);
+          if (Object.keys(extracted).length > 0) {
+            setLiveSpec(extracted);
+          }
         }).catch(() => {});
       }
 
       if (reply.includes("INTAKE_COMPLETE")) {
-        // Add final AI message to the conversation
-        const finalAIMsg = "Perfect — I've got everything I need. Before I send this to the team, take a moment to review the brief. Edit anything that doesn't look right.";
-        setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: finalAIMsg }]; setLatestAiIndex(u.length - 1); return u; });
-
-        // Parse the brief and transition to review screen
-        const parsed = parseIntakeComplete(reply);
+        // Parse the complete brief
+        const brief = parseIntakeComplete(reply);
+        setHiringBrief(brief);
+        
+        // Add final message and transition to review phase
+        const finalMsg = "Perfect — I've got everything I need. Review the brief and make any edits before submitting to the team.";
+        setMessages(prev => [...prev, { role: "assistant" as const, content: finalMsg }]);
+        setLatestAiIndex(messages.length + 1);
+        setComplete(true);
+        
+        // Delay transition to allow user to see the message
         setTimeout(() => {
-          setHiringBrief(parsed);
           setSessionPhase("review");
         }, 2200);
-      } else if (reply.includes("render_component: contact_info_form_bar")) {
-        // Clean signal from displayed text, store cleaned version in messages
-        const cleanedReply = stripContactFormSignal(reply);
-        setMessages(prev => {
-          const u = [...prev, { role: "assistant" as const, content: cleanedReply }];
-          setLatestAiIndex(u.length - 1);
-          setContactFormIndex(u.length - 1);
-          return u;
-        });
       } else {
-        setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: reply }]; setLatestAiIndex(u.length - 1); return u; });
+        // Regular AI response
+        setMessages(prev => [...prev, { role: "assistant" as const, content: reply }]);
+        setLatestAiIndex(messages.length + 1);
       }
-    } catch (error) {
-      console.error("Chat API error", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      setMessages(prev => { const u = [...prev, { role: "assistant" as const, content: `Error: ${errorMessage}` }]; setLatestAiIndex(u.length - 1); return u; });
+    } catch (err) {
+      const errorText = err instanceof Error ? err.message : "An unexpected error occurred.";
+      setMessages(prev => [...prev, { role: "assistant" as const, content: `Error: ${errorText}` }]);
+      setLatestAiIndex(messages.length + 1);
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, complete, sessionPhase, sessionId]);
+  }, [messages, input, loading, complete, sessionPhase]);
 
-  const handleInteractiveConfirm = useCallback((messageIndex: number, value: string) => {
-    setInteractiveUsed(prev => new Set([...prev, messageIndex]));
-    sendMessage(value);
-  }, [sendMessage]);
+  // ─── Handle brief confirmation ───────────────────────────────────────────────
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-  };
+  async function handleBriefConfirm(edited: HiringBrief) {
+    setReviewSaving(true);
+    try {
+      // TODO: Save to Supabase
+      // await saveBriefToSupabase(sessionId, edited, detectedEmail ?? undefined);
+    } catch { /* non-fatal */ }
+    setHiringBrief(edited);
+    setReviewSaving(false);
+    setComplete(true);
+    setSessionPhase("chat");
+  }
 
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
-    const el = e.target;
-    el.style.height = "56px";
-    el.style.height = Math.min(el.scrollHeight, 150) + "px";
-  };
-
-  const showNoConversation = sessionPhase === "chat" && messages.length === 0;
-  const showRecovery = sessionPhase === "chat" && !recoveryBarHidden;
-  const hasSidebarContent = Object.values(spec).some(v => v && (Array.isArray(v) ? v.length > 0 : true)) || hiringBrief !== null;
+  // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[2000] flex flex-col"
-          style={{ background: BG }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.22 }}
+          className="fixed inset-0 bg-black bg-opacity-40 z-40 flex items-end sm:items-center justify-center"
         >
-          {/* Top accent bar */}
-          <div style={{ height: 3, background: "linear-gradient(90deg, #1A7A4A, #34D399, #6EE7B7)", flexShrink: 0 }} />
-
-          {/* Header */}
-          <div className="flex-shrink-0" style={{ background: "rgba(250,250,248,0.97)", borderBottom: "1px solid rgba(0,0,0,0.07)", backdropFilter: "blur(12px)" }}>
-            <div className="max-w-none mx-auto px-6 flex items-center justify-between" style={{ height: 64 }}>
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ background: AI_BUBBLE_BG, border: `1px solid ${AI_BUBBLE_BORDER}` }}>
-                  <img src={logoImage} alt="Bridgix" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                </div>
-                <div>
-                  <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 15, color: DARK }}>
-                    Bridgix hiring partner
-                  </span>
-                  <span style={{ fontFamily: "Inter, sans-serif", fontSize: 12, color: "#6B6B6B", marginLeft: 8 }}>
-                    {loading ? "Thinking..." : sessionPhase === "review" ? "Review your brief" : "Online"}
-                  </span>
-                </div>
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="w-full h-full sm:h-auto sm:max-h-96 sm:rounded-lg sm:w-full sm:max-w-4xl bg-white shadow-2xl flex flex-col overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Hiring Intake</h2>
+                <p className="text-xs text-gray-500 mt-1">Let's build your hiring brief together</p>
               </div>
               <div className="flex items-center gap-2">
-                {/* Sidebar toggle */}
                 <button
-                  onClick={() => setShowSidebar(s => !s)}
-                  title={showSidebar ? "Hide brief" : "Show hiring brief"}
-                  style={{
-                    background: showSidebar ? "rgba(26,122,74,0.1)" : "#F0F0EE",
-                    border: showSidebar ? "1px solid rgba(26,122,74,0.2)" : "none",
-                    borderRadius: 8, width: 32, height: 32, cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    color: showSidebar ? ACCENT : "#6B6B6B", transition: "all 0.15s", position: "relative",
-                  }}
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded"
                 >
-                  <svg width="15" height="13" viewBox="0 0 18 14" fill="none">
-                    <rect x="0" y="0" width="7" height="14" rx="2" fill="currentColor" opacity="0.4"/>
-                    <rect x="9" y="0" width="9" height="3" rx="1.5" fill="currentColor"/>
-                    <rect x="9" y="5.5" width="7" height="3" rx="1.5" fill="currentColor"/>
-                    <rect x="9" y="11" width="5" height="3" rx="1.5" fill="currentColor"/>
-                  </svg>
-                  {hasSidebarContent && !showSidebar && (
-                    <span style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: ACCENT }} />
-                  )}
+                  <Menu size={20} />
                 </button>
                 <button
                   onClick={onClose}
-                  style={{ background: "#F0F0EE", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#6B6B6B", transition: "all 0.15s" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#E0E0DE"; e.currentTarget.style.color = DARK; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "#F0F0EE"; e.currentTarget.style.color = "#6B6B6B"; }}
+                  className="p-2 text-gray-600 hover:bg-gray-100 rounded"
                 >
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 3L13 13M13 3L3 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
+                  <X size={20} />
                 </button>
               </div>
             </div>
-          </div>
 
-          {/* Continue / Start Fresh Banner */}
-          <AnimatePresence>
-            {sessionPhase === "continue_banner" && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}
-                style={{ background: "white", borderBottom: "1px solid rgba(0,0,0,0.07)", flexShrink: 0 }}
-              >
-                <div className="max-w-[780px] mx-auto px-6 py-5 flex flex-col md:flex-row md:items-center gap-4">
-                  <div className="flex-1">
-                    <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: 15, color: DARK, marginBottom: 2 }}>You have an unfinished conversation</p>
-                    <p style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "#6B6B6B" }}>Pick up where you left off, or start fresh?</p>
+            {/* Main Content */}
+            <div className="flex flex-1 overflow-hidden">
+              {/* Chat Area */}
+              <div className="flex-1 flex flex-col overflow-hidden">
+                {sessionPhase === "review" && hiringBrief ? (
+                  <div className="flex-1 overflow-y-auto p-4">
+                    <HiringBriefReview
+                      brief={hiringBrief}
+                      onConfirm={handleBriefConfirm}
+                      isSaving={reviewSaving}
+                    />
                   </div>
-                  <div className="flex gap-3">
-                    <button onClick={continueSession}
-                      style={{ background: DARK, color: "white", border: "none", borderRadius: 10, padding: "10px 22px", fontSize: 14, fontFamily: "Inter, sans-serif", fontWeight: 500, cursor: "pointer" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = ACCENT; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = DARK; }}>
-                      Continue
-                    </button>
-                    <button onClick={startFresh}
-                      style={{ background: "transparent", color: "#6B6B6B", border: "1px solid rgba(0,0,0,0.12)", borderRadius: 10, padding: "10px 22px", fontSize: 14, fontFamily: "Inter, sans-serif", cursor: "pointer" }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(0,0,0,0.25)"; e.currentTarget.style.color = DARK; }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(0,0,0,0.12)"; e.currentTarget.style.color = "#6B6B6B"; }}>
-                      Start fresh
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Main body: chat/review + sidebar */}
-          <div className="flex flex-1 overflow-hidden">
-            {/* Content area */}
-            <div className="flex-1 overflow-y-auto" style={{ scrollBehavior: "smooth" }}>
-
-              {/* Review screen (Doc 2) — shown when sessionPhase === "review" */}
-              {sessionPhase === "review" && hiringBrief && (
-                <HiringBriefReview
-                  brief={hiringBrief}
-                  onConfirm={handleBriefConfirm}
-                  saving={reviewSaving}
-                />
-              )}
-
-              {/* Chat area — shown when sessionPhase === "chat" */}
-              {sessionPhase !== "review" && (
-                <div className="max-w-[780px] mx-auto px-6 py-8 flex flex-col h-full">
-
-                  {showNoConversation && (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center">
-                      <motion.h1
-                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-                        style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "clamp(32px, 5vw, 52px)", color: DARK, letterSpacing: "-0.03em", marginBottom: 16, lineHeight: 1.1 }}
-                      >
-                        {greeting}
-                      </motion.h1>
-                      <motion.p
-                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}
-                        style={{ fontFamily: "Inter, sans-serif", fontSize: 16, color: "#6B6B6B", fontWeight: 300, maxWidth: 360, lineHeight: 1.6 }}
-                      >
-                        Tell us about your role and we'll find you the right engineer.
-                      </motion.p>
-                    </div>
-                  )}
-
-                  {showRecovery && sessionPhase === "chat" && messages.length > 0 && (
-                    <RecoveryBar onLoad={handleEmailLoad} hidden={recoveryBarHidden} />
-                  )}
-
-                  {sessionPhase === "chat" && messages.length > 0 && messages.length <= 2 && (
-                    <motion.h1
-                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-                      style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "clamp(28px, 4vw, 42px)", color: DARK, letterSpacing: "-0.03em", marginBottom: 32, lineHeight: 1.15, textAlign: "center" }}
-                    >
-                      {greeting}
-                    </motion.h1>
-                  )}
-
-                  <div className="flex flex-col gap-5">
-                    {messages.map((msg, i) => {
-                      if (msg.role === "assistant") {
-                        const interactiveType = detectInteractiveType(msg.content);
-                        const isLastMsg = i === messages.length - 1;
-                        const shouldShowInteractive = interactiveType && isLastMsg && !interactiveUsed.has(i) && !loading && !complete;
-                        const shouldShowContactForm = i === contactFormIndex && !interactiveUsed.has(i) && !loading && !complete;
-                        return (
-                          <div key={i}>
-                            <AIBubble content={msg.content} isLatest={i === latestAiIndex} />
-                            {shouldShowContactForm && (
-                              <div style={{ marginTop: 12, marginLeft: 44 }}>
-                                <ContactFormBar onConfirm={(val) => handleInteractiveConfirm(i, val)} />
-                              </div>
+                ) : (
+                  <>
+                    {/* Messages */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                      {messages.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center">
+                          <div className="text-5xl mb-4">👋</div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">{getTimeGreeting()}</h3>
+                          <p className="text-sm text-gray-600 max-w-xs">
+                            I'm here to help you build a comprehensive hiring brief. Tell me about the role you're looking to fill.
+                          </p>
+                        </div>
+                      ) : (
+                        messages.map((msg, i) => (
+                          <div key={i} className="flex gap-3">
+                            {msg.role === "assistant" && (
+                              <AiBubble
+                                content={msg.content}
+                                onExtractEmail={(email) => setDetectedEmail(email)}
+                              />
                             )}
-                            {shouldShowInteractive && !shouldShowContactForm && (
-                              <div style={{ marginTop: 12, marginLeft: 44 }}>
-                                {interactiveType === "slider" && <SliderInput onConfirm={(val) => handleInteractiveConfirm(i, val)} />}
-                                {interactiveType === "tags" && <TagsInput onConfirm={(val) => handleInteractiveConfirm(i, val)} />}
-                                {interactiveType === "choice" && <ChoiceInput onConfirm={(val) => handleInteractiveConfirm(i, val)} />}
-                              </div>
-                            )}
+                            {msg.role === "user" && <UserBubble content={msg.content} />}
                           </div>
-                        );
-                      }
-                      return <UserBubble key={i} content={msg.content} />;
-                    })}
-                    {loading && <TypingDots />}
-                    {complete && <CompletionPanel />}
-                  </div>
-                  <div ref={messagesEndRef} style={{ height: 24 }} />
-                </div>
-              )}
-            </div>
+                        ))
+                      )}
+                      {loading && (
+                        <div className="flex gap-3">
+                          <div className="text-2xl">⏳</div>
+                          <div className="flex gap-1 items-center">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+                          </div>
+                        </div>
+                      )}
+                      <div ref={messagesEndRef} />
+                    </div>
 
-            {/* Sidebar — hidden on mobile, toggled by button */}
-            <div className="hidden lg:flex">
+                    {/* Input Area */}
+                    <div className="border-t border-gray-200 p-4 bg-gray-50">
+                      <div className="flex gap-3">
+                        <div className="flex-1 relative">
+                          <textarea
+                            ref={textareaRef}
+                            value={input}
+                            onChange={(e) => {
+                              setInput(e.target.value);
+                              if (textareaRef.current) {
+                                textareaRef.current.style.height = "auto";
+                                textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + "px";
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                sendMessage();
+                              }
+                            }}
+                            placeholder="Share your thoughts..."
+                            className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                            style={{ minHeight: "56px", maxHeight: "120px" }}
+                          />
+                          <button
+                            onClick={handleMicClick}
+                            className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded ${isListening ? "bg-red-100 text-red-600" : "text-gray-400 hover:text-gray-600"}`}
+                          >
+                            <Mic size={18} />
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => sendMessage()}
+                          disabled={!input.trim() || loading}
+                          className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                        >
+                          <Send size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Sidebar */}
               <HiringBriefSidebar spec={spec} hiringBrief={hiringBrief} visible={showSidebar} />
             </div>
-          </div>
+          </motion.div>
 
-          {/* Input bar — hidden during review or when complete */}
-          {sessionPhase === "chat" && !complete && (
-            <div className="flex-shrink-0" style={{ background: "rgba(250,250,248,0.97)", borderTop: "1px solid rgba(0,0,0,0.07)", backdropFilter: "blur(12px)" }}>
-              <div className="max-w-[780px] mx-auto px-6 py-4">
-                <div className="flex items-end gap-3">
-                  {/* Section 4: larger font size */}
-                  <textarea
-                    ref={textareaRef}
-                    value={input}
-                    onChange={handleInput}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Reply..."
-                    rows={1}
-                    style={{
-                      flex: 1, border: "1.5px solid #E4E4E2", borderRadius: 14, padding: "16px 20px",
-                      fontFamily: "Inter, sans-serif", fontSize: 17, color: DARK,
-                      resize: "none", minHeight: 56, maxHeight: 150, overflowY: "auto",
-                      outline: "none", transition: "border-color 0.2s, box-shadow 0.2s", lineHeight: 1.55,
-                      background: "#FFFFFF", boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                    }}
-                    onFocus={e => { e.target.style.borderColor = ACCENT; e.target.style.boxShadow = "0 0 0 3px rgba(26,122,74,0.08)"; }}
-                    onBlur={e => { e.target.style.borderColor = "#E4E4E2"; e.target.style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)"; }}
-                  />
-                  {/* Section 5: microphone — direct handler, no useCallback */}
-                  <button
-                    onClick={handleMicClick}
-                    type="button"
-                    title={isListening ? "Stop listening" : "Voice input"}
-                    style={{
-                      width: 56, height: 56, borderRadius: 14, border: "none", flexShrink: 0,
-                      background: isListening ? "linear-gradient(135deg, #E05050, #FF7070)" : AI_BUBBLE_BG,
-                      cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s",
-                    }}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" stroke={isListening ? "white" : ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8" stroke={isListening ? "white" : ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
-                  {/* Send button */}
-                  <button
-                    onClick={() => sendMessage()}
-                    disabled={!input.trim() || loading}
-                    style={{
-                      width: 56, height: 56, borderRadius: 14, border: "none", flexShrink: 0,
-                      background: !input.trim() || loading ? "#E4E4E2" : `linear-gradient(135deg, ${ACCENT}, #2A9D5C)`,
-                      cursor: !input.trim() || loading ? "not-allowed" : "pointer",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      boxShadow: input.trim() && !loading ? "0 4px 14px rgba(26,122,74,0.3)" : "none",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z" stroke={!input.trim() || loading ? "#B0B0B0" : "white"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
-                </div>
-                <p style={{ fontFamily: "Inter, sans-serif", fontSize: 11, color: "#B0B0B0", marginTop: 8, textAlign: "center" }}>
-                  Bridgix hiring partner · Responses within seconds
-                </p>
-              </div>
-            </div>
-          )}
+          {/* Mobile Drawer */}
+          <SidebarDrawer
+            spec={spec}
+            hiringBrief={hiringBrief}
+            visible={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+          />
         </motion.div>
       )}
     </AnimatePresence>
