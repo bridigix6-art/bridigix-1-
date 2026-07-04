@@ -1,1 +1,18 @@
-<link rel="icon" type="image/jpeg" href="/bridgix-icon.jpg" />
+<svg viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+  <!-- Define the puzzle piece pieces -->
+  
+  <!-- Top-left puzzle piece -->
+  <path d="M 175 175 L 425 175 L 425 305 Q 425 380 380 425 Q 305 425 305 380 L 305 305 Q 305 230 250 175 L 175 175 Z" fill="#1ABC9C" stroke="#2C3E50" stroke-width="24" stroke-linejoin="round"/>
+  
+  <!-- Top-right puzzle piece -->
+  <path d="M 495 175 L 625 305 L 625 175 L 495 175 Z M 495 305 Q 495 380 550 425 Q 625 425 625 380 L 625 305 Q 625 230 570 175 L 495 175 Z" fill="#1ABC9C" stroke="#2C3E50" stroke-width="24" stroke-linejoin="round"/>
+  
+  <!-- Bottom-left puzzle piece -->
+  <path d="M 175 375 Q 175 450 230 495 L 305 495 Q 305 540 250 575 L 175 575 L 175 375 Z" fill="#1ABC9C" stroke="#2C3E50" stroke-width="24" stroke-linejoin="round"/>
+  
+  <!-- Center diagonal puzzle piece -->
+  <path d="M 310 310 L 555 555 L 490 620 L 245 375 Z" fill="#1ABC9C" stroke="#2C3E50" stroke-width="24" stroke-linejoin="round"/>
+  
+  <!-- Bottom-right puzzle piece -->
+  <path d="M 560 435 L 625 375 L 625 575 Q 625 625 575 625 L 485 625 L 560 435 Z" fill="#1ABC9C" stroke="#2C3E50" stroke-width="24" stroke-linejoin="round"/>
+</svg>
