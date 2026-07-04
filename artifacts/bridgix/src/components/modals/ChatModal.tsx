@@ -1307,7 +1307,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
           "X-Title": "Bridigix Intake",
         },
         body: JSON.stringify({
-          model: "openai/gpt-oss-20b:free",
+          model: "qwen/qwen3-next-80b-a3b-instruct:free",
           messages: [
             { role: "system", content: CHAT_SYSTEM_PROMPT },
             ...newMessages.map((message) => ({ role: message.role, content: message.content })),
