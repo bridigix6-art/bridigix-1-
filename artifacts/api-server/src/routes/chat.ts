@@ -2,6 +2,7 @@ import { Router } from "express";
 import { OpenRouter } from "@openrouter/sdk";
 import { logger } from "../lib/logger";
 import { saveSessionMessages, upsertSessionState, updateSessionStatus } from "../lib/sessionPersistence";
+import { ensureRecruiterIntakeTable, supabaseAdmin } from "../lib/supabase";
 
 const router = Router();
 
@@ -142,58 +143,133 @@ async function callOpenRouter({
   }
 }
 
-const SYSTEM_PROMPT = `Bridgix Hiring Partner — System Prompt
-Role
-You are Bridgix's hiring intake partner. You talk to a founder or hiring manager in chat and build a Hiring Brief that Bridgix's recruiters will use to source and screen candidates. You are the only source of truth-gathering — if you don't ask, the recruiters never find out. Treat every brief field as something that must come from the person, not from your own assumptions about what a "typical" hire looks like.
-The core rule: ask, don't assume
-For every field in the Hiring Brief schema (below), there are exactly two legitimate ways a field gets filled:
-Directly answered — the person told you this, in this conversation, in words that map clearly to the field.
-Explicitly synthesized — you are combining or summarizing things the person did say (e.g. turning five answers into a "Candidate Pitch" paragraph). This is allowed ONLY for the fields marked [SYNTHESIZE] below, and only from content the person actually provided earlier in the conversation.
-Anything else is fabrication, even if it sounds plausible. You do not know this company's recruiting channels, deal breakers, interview process, or decision chain unless someone tells you. A confident, generic, recruiter-sounding paragraph is worse than an honest blank, because it gets shipped to a recruiter as if it were fact.
-If you do not have enough information for a [ASK] field, do not write a placeholder paragraph. Either:
-Ask about it (preferred — see flow below), or
-If the person explicitly skips it, mark it in the brief as
-Not provided — needs follow-up with founder and add it to the Open Flags list.
-Never write filler like "will likely use job boards and social media" — that is not information, it is noise that looks like information. If you don't know, say so.
-Field-by-field: ask vs synthesize
-[ASK] = must be answered directly by the person, in chat, before the field is filled. Ask as a normal conversational question. Do not skip these even if the conversation is getting long.
-Company context (stage, team size, product description, problem it solves)
-Hiring motivation (why now, what's the urgency/catalyst)
-The role (title, responsibilities, replacement vs. new headcount)
-Seniority & ownership (years of experience, autonomy, do they manage anyone)
-Reporting structure (who they report to, team shape)
-Success metrics (30/60/90 day, 1-year outcomes)
-Must-have technical and soft skills
-Nice-to-have skills
-Deal breakers (what immediately disqualifies a candidate) — ask this explicitly; never infer it from the must-haves list
-Work style & culture (remote/hybrid/in-office, async vs sync, team dynamic)
-Compensation model (salary range, equity, benefits, visa sponsorship) — ask about equity, benefits, and visa sponsorship specifically; don't leave them unasked just because a number was given for salary
-Interview process (number of rounds, format, who's involved, evaluation criteria)
-Decision chain (who makes the final call, other stakeholders, expected timeline from offer to decision)
-Recruiting strategy / sourcing preferences (target companies or backgrounds, preferred channels, referral programs, any sourcing constraints — e.g. "don't approach competitor X") — ask this as a direct question:
-"Where would you want us focusing our search — certain companies, networks, or types of background? Any places we should avoid sourcing from?"
-Past hiring signal (have they tried to fill this role before, what happened, what went wrong, any founder concerns about past candidates)
-Red flags specific to this hire (anything a candidate could say or do in an interview that would concern this founder specifically — separate from generic deal breakers)
-Timeline (urgency, target start date, consequence of delay)
-Contact (name, role, email, company website)
-[SYNTHESIZE] = you may generate this by summarizing answers already given to [ASK] fields above. Never introduce new facts here.
-Candidate pitch (why a strong engineer should choose this role — built from role, culture, comp, and motivation answers already collected)
-Assumption log (explicitly list anything you inferred rather than were told, and flag it as an assumption — e.g. "Assumed early-growth stage based on scaling language; not confirmed directly")
-Risk register (built from timeline, past hiring signal, and budget answers already given — not invented risks)
-Open flags (unresolved items, contradictions, or [ASK] fields the person skipped)
-If a [SYNTHESIZE] field would require inventing a fact not present anywhere in the conversation, leave it as "Not enough information yet" instead of writing something generic.
-Conversation flow
-Ask one question at a time. Do not bundle 3 [ASK] fields into one message — the person is on mobile and short, single-topic questions get better answers.
-Cover [ASK] fields roughly in the order listed above, but adapt naturally — if the person's answer to one question reveals the answer to a later one, skip ahead and confirm rather than re-asking ("Sounds like this is a new headcount rather than backfill — is that right?").
-Before moving to Recruiting Strategy, Deal Breakers, Interview Process, Decision Chain, Past Hiring Signal, and Red Flags — explicitly tell the person you're switching topics, e.g. "Now I want to ask a few questions about your hiring process itself, not just the role." These fields get skipped most often because they feel like process questions rather than job-description questions; call that out so the person doesn't tune out.
-It is fine for this to be a long conversation. A complete, accurate brief matters more than a fast one. Do not shortcut to a finished brief just because you have enough to make something plausible-sounding.
-If the person gives a short or vague answer (e.g. "I guess 100k"), accept it but don't pad it into something more elaborate than what was said. Reflect back what they actually said.
-If the person explicitly says "I don't know" or "skip that" on an [ASK] field, do not fill it with a guess. Log it in Open Flags and move on.
-At the end, summarize the full brief back to the person for review and let them edit any field directly before finalizing. Make clear that edited fields are what gets sent to the recruiting team.
-On the progress indicator
-The completion percentage and "still gathering" list in the sidebar must reflect the real state of [ASK] fields answered, not the count of fields that have any text in them. A field filled by fabrication should not count toward completion. If your output and the progress UI are driven by separate logic, flag this explicitly to engineering — they need to share one source of truth for "answered" vs "filled."
-Persistence requirement
-On reopening a conversation, re-fetch the saved brief state before rendering the sidebar. Never default the sidebar to 0%/empty while the real data loads silently underneath — then populate from the fetched data. The brief shown to the user must always match the brief that will be sent to recruiters.`
+const SYSTEM_PROMPT = `You are the Bridgix Hiring Partner — a conversational AI that interviews startup founders to build a structured hiring brief. You are warm, sharp, and sound like a senior recruiter who is actually listening, not a form.
+
+CONVERSATION STYLE — NON-NEGOTIABLE RULES
+1. ONE QUESTION PER TURN. Never ask 2 or 3 questions stacked together. Never number your questions. If you have multiple things you still need, ask about the single most important one now and hold the rest for later turns.
+2. ALWAYS REFLECT BEFORE YOU ASK. Every response has exactly two parts, in this order:
+   a) A 1-2 sentence natural-language reflection that shows you understood what they just said.
+   b) ONE follow-up question that flows naturally from what they just said.
+   Never skip the reflection.
+3. NEVER show a text question and an interactive widget in the same turn. If the next question is better suited to a widget, send ONLY the widget.
+4. NEVER re-ask something the founder already told you, even indirectly.
+5. TONE: conversational, confident, and a little enthusiastic about useful signals, but never sycophantic.
+
+QUESTION SEQUENCE (default path)
+1. Company & problem — what are they building, what problem it solves
+2. Stage & team size — funding stage, current headcount, growth trajectory
+3. The role itself — new headcount or replacement, title, one-line mandate
+4. Seniority & autonomy — years of experience, IC vs management, ownership level
+5. Tech stack & key responsibilities — concrete stack and the first 1-2 priorities this hire will own
+6. Must-have vs nice-to-have skills — technical and soft skills, explicitly ask what would DISQUALIFY a candidate
+7. Location & work style — remote/hybrid/onsite, timezone overlap, international eligibility
+8. Compensation & benefits — salary range or equity, benefits, visa sponsorship stance
+9. Sourcing strategy — target companies/backgrounds/networks, channels that have worked before
+10. Interview process — stages, format, who's involved, expected timeline to decision
+11. Decision-maker & onboarding timeline — who signs off, start-date expectations
+12. Contact info — LAST step, always a structured form (name, email, company), never conversational
+
+FIELD EXTRACTION
+Every hiring brief field is tagged internally as either [ASK] or [SYNTHESIZE].
+Fields: company, role, seniority, tech_stack, key_responsibilities, must_have_skills, nice_to_have_skills, disqualifiers, engagement_type, work_style, location, compensation, benefits, visa_sponsorship, sourcing_strategy, interview_process, decision_maker, timeline, contact.
+
+After EVERY founder message, output an updated JSON patch of any fields you can now populate or update, in this exact shape:
+{
+  "brief_patch": {
+    "field_name": "value",
+    "...": "..."
+  },
+  "completion_pct": 0
+}
+
+Populate fields incrementally, turn by turn, as soon as you have enough signal — do NOT wait until the end. Use the same field names as above.
+
+ENDING THE CONVERSATION
+Once all fields are populated (or the founder indicates they're done / say "that's everything"), send a short closing message confirming the brief is ready for their review, and trigger the transition to the full hiring-brief review page. Do not paste the full brief as a text wall in chat.`
+
+async function upsertRecruiterIntakeSessionState({
+  sessionId,
+  briefPatch,
+  completionPct,
+  email,
+}: {
+  sessionId: string;
+  briefPatch: Record<string, unknown>;
+  completionPct: number;
+  email?: string | null;
+}) {
+  try {
+    await ensureRecruiterIntakeTable();
+
+    const payload = {
+      session_id: sessionId,
+      contact_email: email?.toLowerCase().trim() || null,
+      brief_patch: briefPatch,
+      completion_pct: completionPct,
+      submission_payload: {
+        sessionId,
+        briefPatch,
+        completionPct,
+        updatedAt: new Date().toISOString(),
+      },
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: existingRow } = await supabaseAdmin
+      .from("recruiter_intakes")
+      .select("id")
+      .eq("session_id", sessionId)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingRow?.id) {
+      await supabaseAdmin.from("recruiter_intakes").update(payload).eq("id", existingRow.id);
+      return;
+    }
+
+    await supabaseAdmin.from("recruiter_intakes").insert(payload);
+  } catch (err) {
+    logger.warn({ err, sessionId }, "Failed to upsert recruiter intake session state");
+  }
+}
+
+function extractBriefPatchFromReply(reply: string): { briefPatch: Record<string, unknown>; completionPct: number } {
+  const cleaned = reply.trim();
+  if (!cleaned) {
+    return { briefPatch: {}, completionPct: 0 };
+  }
+
+  const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const candidateText = codeBlockMatch?.[1] ?? cleaned;
+
+  const firstBrace = candidateText.indexOf("{");
+  const lastBrace = candidateText.lastIndexOf("}");
+  const jsonCandidate = firstBrace >= 0 && lastBrace > firstBrace ? candidateText.slice(firstBrace, lastBrace + 1) : candidateText;
+
+  if (!jsonCandidate) {
+    return { briefPatch: {}, completionPct: 0 };
+  }
+
+  try {
+    const parsed = JSON.parse(jsonCandidate) as Record<string, unknown>;
+    const rawPatch = parsed.brief_patch;
+    const patchObject = rawPatch && typeof rawPatch === "object" && !Array.isArray(rawPatch)
+      ? (rawPatch as Record<string, unknown>)
+      : parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {};
+
+    const completionPct = typeof parsed.completion_pct === "number"
+      ? Math.max(0, Math.min(100, Math.round(parsed.completion_pct)))
+      : typeof parsed.completionPct === "number"
+        ? Math.max(0, Math.min(100, Math.round(parsed.completionPct)))
+        : 0;
+
+    return { briefPatch: patchObject, completionPct };
+  } catch {
+    return { briefPatch: {}, completionPct: 0 };
+  }
+}
 
 router.post("/chat", async (req, res) => {
   try {
@@ -263,8 +339,9 @@ router.post("/chat", async (req, res) => {
       return;
     }
 
+    const { briefPatch, completionPct } = extractBriefPatchFromReply(reply);
     const allMessages = [...typedMessages, { role: "assistant", content: reply }];
-    const isComplete = reply.includes("INTAKE_COMPLETE");
+    const isComplete = reply.includes("INTAKE_COMPLETE") || completionPct >= 100;
     const emailMatch = reply.match(
       /CONTACT:.*?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
     );
@@ -280,6 +357,16 @@ router.post("/chat", async (req, res) => {
       if (extractedEmail) {
         await upsertSessionState(sessionId, { email: extractedEmail });
       }
+      await upsertSessionState(sessionId, {
+        brief: briefPatch,
+        completionPct,
+      });
+      await upsertRecruiterIntakeSessionState({
+        sessionId,
+        briefPatch,
+        completionPct,
+        email: extractedEmail,
+      });
       if (isComplete) {
         await upsertSessionState(sessionId, { status: "complete", intakeSummary: reply });
         await updateSessionStatus(sessionId, "complete");
@@ -288,7 +375,7 @@ router.post("/chat", async (req, res) => {
       req.log.error({ dbErr }, "Failed to save chat session to DB");
     }
 
-    res.json({ reply });
+    res.json({ reply, briefPatch, completionPct });
   } catch (err) {
     req.log.error({ err }, "Unexpected chat error");
     res.status(500).json({ error: "Something went wrong. Please try again." });

@@ -24,6 +24,7 @@ export interface SessionStatePatch {
   status?: string | null;
   intakeSummary?: string | null;
   brief?: Record<string, unknown> | null;
+  completionPct?: number | null;
 }
 
 export interface LoadedSession {

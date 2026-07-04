@@ -210,7 +210,9 @@ router.post("/save-hiring-brief", async (req, res) => {
       await upsertSessionState(sessionId, {
         email: email?.toLowerCase().trim() ?? null,
         status: briefStatus,
-        intakeSummary: "complete",
+        intakeSummary: briefStatus === "confirmed" ? "complete" : "draft",
+        brief: brief as Record<string, unknown>,
+        completionPct: 100,
       });
       if (briefStatus === "confirmed") {
         await updateSessionStatus(sessionId, "complete");

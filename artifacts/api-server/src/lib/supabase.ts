@@ -39,6 +39,7 @@ export async function ensureRecruiterIntakeTable() {
     `
       CREATE TABLE IF NOT EXISTS recruiter_intakes (
         id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        session_id TEXT,
         contact_name TEXT,
         contact_email TEXT,
         company_name TEXT,
@@ -65,11 +66,14 @@ export async function ensureRecruiterIntakeTable() {
         referral_bonus TEXT,
         source TEXT DEFAULT 'bridgix_recruiter_form',
         submission_payload JSONB DEFAULT '{}'::JSONB,
+        brief_patch JSONB DEFAULT '{}'::JSONB,
+        completion_pct INTEGER DEFAULT 0,
         submitted_at TIMESTAMPTZ DEFAULT NOW(),
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS recruiter_intakes_contact_email_idx ON recruiter_intakes(contact_email);
       CREATE INDEX IF NOT EXISTS recruiter_intakes_company_name_idx ON recruiter_intakes(company_name);
+      CREATE INDEX IF NOT EXISTS recruiter_intakes_session_idx ON recruiter_intakes(session_id);
       CREATE INDEX IF NOT EXISTS recruiter_intakes_submitted_at_idx ON recruiter_intakes(submitted_at DESC);
     `
   );
