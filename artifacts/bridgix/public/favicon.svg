@@ -1,18 +1,10 @@
 <svg viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
-  <!-- Define the puzzle piece pieces -->
-  
   <!-- Top-left puzzle piece -->
-  <path d="M 175 175 L 425 175 L 425 305 Q 425 380 380 425 Q 305 425 305 380 L 305 305 Q 305 230 250 175 L 175 175 Z" fill="#1ABC9C" stroke="#2C3E50" stroke-width="24" stroke-linejoin="round"/>
+  <path d="M 220 200 L 430 200 Q 445 200 445 215 L 445 340 Q 445 365 465 375 Q 485 385 500 365 Q 510 350 510 330 L 510 215 Q 510 200 525 200 L 560 200 Q 575 200 575 215 L 575 400 Q 575 415 560 415 L 400 415 Q 380 415 370 435 Q 360 455 380 465 Q 400 475 420 465 L 560 465 Q 575 465 575 480 L 575 620 Q 575 635 560 635 L 220 635 Q 205 635 205 620 L 205 215 Q 205 200 220 200 Z" fill="#1ABC9C" stroke="#2C3E50" stroke-width="32" stroke-linejoin="round" stroke-linecap="round"/>
   
-  <!-- Top-right puzzle piece -->
-  <path d="M 495 175 L 625 305 L 625 175 L 495 175 Z M 495 305 Q 495 380 550 425 Q 625 425 625 380 L 625 305 Q 625 230 570 175 L 495 175 Z" fill="#1ABC9C" stroke="#2C3E50" stroke-width="24" stroke-linejoin="round"/>
-  
-  <!-- Bottom-left puzzle piece -->
-  <path d="M 175 375 Q 175 450 230 495 L 305 495 Q 305 540 250 575 L 175 575 L 175 375 Z" fill="#1ABC9C" stroke="#2C3E50" stroke-width="24" stroke-linejoin="round"/>
-  
-  <!-- Center diagonal puzzle piece -->
-  <path d="M 310 310 L 555 555 L 490 620 L 245 375 Z" fill="#1ABC9C" stroke="#2C3E50" stroke-width="24" stroke-linejoin="round"/>
+  <!-- Diagonal/center puzzle piece -->
+  <path d="M 310 310 L 560 310 Q 575 310 575 325 L 575 575 Q 575 590 560 590 L 310 590 Q 295 590 295 575 L 295 325 Q 295 310 310 310 Z" fill="#1ABC9C" stroke="#2C3E50" stroke-width="32" stroke-linejoin="round" stroke-linecap="round" transform="rotate(45 437.5 450)"/>
   
   <!-- Bottom-right puzzle piece -->
-  <path d="M 560 435 L 625 375 L 625 575 Q 625 625 575 625 L 485 625 L 560 435 Z" fill="#1ABC9C" stroke="#2C3E50" stroke-width="24" stroke-linejoin="round"/>
+  <path d="M 500 450 L 625 450 Q 640 450 640 465 L 640 620 Q 640 635 625 635 L 500 635 Q 485 635 485 620 L 485 465 Q 485 450 500 450 Z" fill="#1ABC9C" stroke="#2C3E50" stroke-width="32" stroke-linejoin="round" stroke-linecap="round"/>
 </svg>
