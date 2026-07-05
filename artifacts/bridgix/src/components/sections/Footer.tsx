@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import logoImage from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
-import { apiEndpoint } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 export function Footer() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -14,16 +14,15 @@ export function Footer() {
     if (!email.trim() || submitting) return;
     setSubmitting(true);
     try {
-      const res = await fetch(apiEndpoint("/api/subscribe"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
+      const { error } = await supabase.from("join_applications").insert({
+        name: "Newsletter Subscriber",
+        email: email.trim().toLowerCase(),
+        status: "newsletter",
+        notes: "newsletter_subscriber",
+        skills: [],
+        work_type: [],
       });
-      if (res.ok) {
-        setSubmitted(true);
-      } else {
-        setSubmitted(true);
-      }
+      setSubmitted(true);
     } catch {
       setSubmitted(true);
     } finally {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
-import { apiEndpoint } from "../../lib/api";
+import { supabase } from "@/lib/supabase";
 
 interface Message {
   role: "user" | "assistant";
@@ -49,8 +49,75 @@ const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 const COOKIE_KEY = "bridigix_tz";
 const STORAGE_SESSION_ID_KEY = "bridigix_session_id";
 
+const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY?.trim();
+const OPENROUTER_URL = "https://api.openrouter.ai/v1/chat/completions";
+
 const ACCENT = "#1A7A4A";
 const BG = "#FAFAF8";
+
+function buildHiringBriefRow(sessionId: string | null, brief: HiringBrief, status: string) {
+  return {
+    session_id: sessionId,
+    status,
+    company_context: brief.companyContext ?? null,
+    hiring_motivation: brief.hiringMotivation ?? null,
+    role: brief.role ?? null,
+    seniority_ownership: brief.seniorityOwnership ?? null,
+    reporting_structure: brief.reportingStructure ?? null,
+    success_metrics: brief.successMetrics ?? null,
+    must_haves: brief.mustHaves ?? null,
+    nice_to_haves: brief.niceToHaves ?? null,
+    deal_breakers: brief.dealBreakers ?? null,
+    technical_requirements: brief.technicalRequirements ?? null,
+    work_style_culture: brief.workStyleCulture ?? null,
+    compensation_model: brief.compensationModel ?? null,
+    interview_process: brief.interviewProcess ?? null,
+    decision_chain: brief.decisionChain ?? null,
+    candidate_pitch: brief.candidatePitch ?? null,
+    recruiting_strategy: brief.recruitingStrategy ?? null,
+    risk_register: brief.riskRegister ?? null,
+    assumption_log: brief.assumptionLog ?? null,
+    past_hiring_signal: brief.pastHiringSignal ?? null,
+    timeline: brief.timeline ?? null,
+    budget: brief.budget ?? null,
+    contact: brief.contact ?? null,
+    open_flags: brief.openFlags ?? null,
+    raw_intake: brief.rawIntake ?? null,
+    created_at: new Date().toISOString(),
+  };
+}
+
+async function fetchOpenRouterReply(messages: Array<{ role: "user" | "assistant"; content: string }>) {
+  if (!OPENROUTER_API_KEY) {
+    throw new Error("Missing OpenRouter API key. Set VITE_OPENROUTER_API_KEY.");
+  }
+
+  const response = await fetch(OPENROUTER_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "deepseek/deepseek-v4-flash",
+      messages: [{ role: "system", content: CHAT_SYSTEM_PROMPT }, ...messages],
+      temperature: 0.72,
+      max_tokens: 2000,
+      stream: false,
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = (payload as { error?: { message?: string } }).error?.message || `HTTP ${response.status}`;
+    throw new Error(message);
+  }
+
+  const choice = (payload as any)?.choices?.[0];
+  return (
+    choice?.message?.content ?? choice?.text ?? ""
+  );
+}
 const DARK = "#0A0A0A";
 const USER_BUBBLE_BG = "rgba(52,211,153,0.14)";
 const USER_BUBBLE_BORDER = "rgba(52,211,153,0.22)";
@@ -731,37 +798,8 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   }, [sessionId]);
 
   const loadExistingConversation = useCallback(async (existingSessionId: string) => {
-    try {
-      const response = await fetch(apiEndpoint(`/api/load-session?sessionId=${encodeURIComponent(existingSessionId)}`));
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload.found) {
-        startFreshConversation(existingSessionId);
-        return;
-      }
-
-      const loadedMessages = Array.isArray(payload.messages)
-        ? payload.messages.map((message: { role?: string; content?: string }) => ({
-            role: message.role === "assistant" ? "assistant" : "user",
-            content: message.content ?? "",
-          }))
-        : [];
-
-      const briefState = payload.state?.brief;
-      const hydratedBrief = hydrateBriefFromState(briefState, null);
-      const savedCompletion = typeof payload.state?.completionPct === "number" ? payload.state.completionPct : 0;
-
-      setSessionId(existingSessionId);
-      setMessages(loadedMessages);
-      setHiringBrief(hydratedBrief);
-      setCompletionPct(savedCompletion);
-      setResumeSession({ messages: loadedMessages, brief: hydratedBrief, completionPct: savedCompletion });
-      setResumePromptOpen(true);
-      setSessionPhase("chat");
-      setComplete(false);
-      setLatestAiIndex(loadedMessages.length > 0 ? loadedMessages.length - 1 : -1);
-    } catch {
-      startFreshConversation(existingSessionId);
-    }
+    // Direct session load is not available in the frontend. Start a fresh conversation for this session.
+    startFreshConversation(existingSessionId);
   }, [startFreshConversation]);
 
   useEffect(() => {
@@ -810,26 +848,9 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
     if (textareaRef.current) textareaRef.current.style.height = "56px";
 
     try {
-      const res = await fetch(apiEndpoint("/api/chat"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messages: newMessages,
-          sessionId,
-        }),
-      });
-
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const errorMessage = (payload as { error?: { message?: string } }).error?.message || "The AI service is temporarily unavailable.";
-        throw new Error(errorMessage ? `HTTP ${res.status}: ${errorMessage}` : `HTTP ${res.status}`);
-      }
-
-      const reply: string = payload.reply ?? "";
-      const briefPatch = payload.briefPatch ?? {};
-      const serverCompletionPct = typeof payload.completionPct === "number" ? payload.completionPct : 0;
+      const reply = await fetchOpenRouterReply(newMessages);
+      const briefPatch = {};
+      const serverCompletionPct = 0;
 
       const emailMatch = reply.match(EMAIL_REGEX);
       if (emailMatch && !detectedEmail) {
@@ -867,13 +888,11 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   async function handleSaveDraft(edited: HiringBrief) {
     setReviewSaving(true);
     try {
-      const response = await fetch(apiEndpoint("/api/save-hiring-brief"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, brief: edited, status: "draft" }),
-      });
-      if (response.ok) {
-        setHiringBrief(edited);
+      if (sessionId) {
+        const { error } = await supabase.from("hiring_briefs").insert(buildHiringBriefRow(sessionId, edited, "draft"));
+        if (!error) {
+          setHiringBrief(edited);
+        }
       }
     } catch {
       // non-fatal
@@ -885,15 +904,15 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   async function handleBriefConfirm(edited: HiringBrief) {
     setReviewSaving(true);
     try {
-      const response = await fetch(apiEndpoint("/api/save-hiring-brief"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, brief: edited, status: "confirmed" }),
-      });
-      if (response.ok) {
-        setHiringBrief(edited);
+      if (sessionId) {
+        const { error } = await supabase.from("hiring_briefs").insert(buildHiringBriefRow(sessionId, edited, "confirmed"));
+        if (!error) {
+          setHiringBrief(edited);
+        }
       }
-    } catch { /* non-fatal */ }
+    } catch {
+      // non-fatal
+    }
     setReviewSaving(false);
     setComplete(true);
   }

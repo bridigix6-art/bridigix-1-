@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navigation } from "@/components/sections/Navigation";
 import { useLocation } from "wouter";
-import { apiEndpoint } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 const ROLES = [
   "Select your primary role",
@@ -470,32 +470,25 @@ export default function JoinPage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch(apiEndpoint("/api/save-application"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          formData: {
-            location: form.location,
-            role: form.role === "Other" ? form.otherRole : form.role,
-            experience: form.experience,
-            skills: form.skills,
-            github: form.github,
-            linkedin: form.linkedin,
-            project: form.project,
-            environment: form.environment,
-            status: form.status,
-            availability: form.availability,
-            workType: form.workType,
-            salary: form.salary,
-            notes: form.notes,
-          },
-        }),
+      const { error } = await supabase.from("join_applications").insert({
+        name: form.name,
+        email: form.email.toLowerCase(),
+        location: form.location,
+        role: form.role === "Other" ? form.otherRole : form.role,
+        experience: form.experience,
+        skills: form.skills,
+        github: form.github,
+        linkedin: form.linkedin,
+        project: form.project,
+        environment: form.environment,
+        status: form.status,
+        availability: form.availability,
+        work_type: form.workType ? [form.workType] : [],
+        salary: form.salary,
+        notes: form.notes,
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error || `Server error ${res.status}`);
+      if (error) {
+        throw new Error(error.message || "Failed to save application");
       }
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });

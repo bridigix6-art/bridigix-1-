@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { Navigation } from "@/components/sections/Navigation";
 import { ChatModal } from "@/components/modals/ChatModal";
-import { apiEndpoint } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 const employmentOptions = ["Full-time", "Part-time", "Contract", "Internship"];
 const locationOptions = ["Remote", "Hybrid", "Onsite"];
@@ -185,40 +185,37 @@ export default function RecruiterIntakePage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const response = await fetch(apiEndpoint("/api/recruiter-intake"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobTitle: form.jobTitle,
-          employmentType: form.employmentType,
-          locationType: form.locationType,
-          locationCity: form.locationCity,
-          roleDescription: form.roleDescription,
+      const { error } = await supabase.from("join_applications").insert({
+        name: form.contactName,
+        email: form.contactEmail.toLowerCase(),
+        location: form.locationCity || form.locationType,
+        role: form.jobTitle,
+        other_role: form.employmentType,
+        experience: form.experience,
+        skills: form.requiredSkills ? form.requiredSkills.split(/,\s*/).filter(Boolean) : [],
+        github: null,
+        linkedin: null,
+        project: form.roleDescription,
+        environment: form.locationType,
+        status: "recruiter_intake",
+        availability: form.urgency,
+        work_type: form.employmentType ? [form.employmentType] : [],
+        salary: form.keepSalaryConfidential ? null : `${form.salaryMin ?? ""}-${form.salaryMax ?? ""}`.replace(/-$/, ""),
+        notes: JSON.stringify({
+          company_name: form.companyName,
+          company_website: form.companyWebsite,
           responsibilities: form.responsibilities,
-          requiredSkills: form.requiredSkills,
-          niceToHaveSkills: form.niceToHaveSkills,
-          experience: form.experience,
-          seniority: form.seniority,
-          headcount: form.headcount,
-          urgency: form.urgency,
-          salaryMin: form.keepSalaryConfidential ? null : form.salaryMin,
-          salaryMax: form.keepSalaryConfidential ? null : form.salaryMax,
-          keepSalaryConfidential: form.keepSalaryConfidential,
-          interviewRounds: form.interviewRounds,
-          redFlags: form.redFlags,
+          nice_to_have_skills: form.niceToHaveSkills,
+          interview_rounds: form.interviewRounds,
+          red_flags: form.redFlags,
           culture: form.culture,
-          visaSponsorship: form.visaSponsorship,
-          referralBonus: form.referralBonus,
-          contactName: form.contactName,
-          contactEmail: form.contactEmail,
-          companyName: form.companyName,
-          companyWebsite: form.companyWebsite,
+          visa_sponsorship: form.visaSponsorship,
+          referral_bonus: form.referralBonus,
+          keep_salary_confidential: form.keepSalaryConfidential,
         }),
       });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error((payload as { error?: string }).error || `Server error ${response.status}`);
+      if (error) {
+        throw new Error(error.message || "Failed to submit recruiter intake");
       }
 
       setSubmitted(true);
