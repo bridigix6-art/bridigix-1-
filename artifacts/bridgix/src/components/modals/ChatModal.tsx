@@ -48,6 +48,7 @@ interface ChatModalProps {
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 const COOKIE_KEY = "bridigix_tz";
 const STORAGE_SESSION_ID_KEY = "bridigix_session_id";
+const STORAGE_SESSION_STATE_KEY = "bridigix_session_state";
 
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY?.trim();
 const OPENROUTER_URL = "https://api.openrouter.ai/v1/chat/completions";
@@ -125,74 +126,130 @@ const AI_BUBBLE_BG = "rgba(26,122,74,0.12)";
 const AI_BUBBLE_BORDER = "rgba(26,122,74,0.18)";
 
 // ─── ENHANCED SYSTEM PROMPT ───────────────────────────────────────────────────
-// Explicitly instructs model on exact format, all fields, and INTAKE_COMPLETE marker
-const CHAT_SYSTEM_PROMPT = `You are Bridigix's hiring intake partner. Guide a founder through a structured hiring intake conversation to build a complete hiring brief.
+const CHAT_SYSTEM_PROMPT = `You are the Bridigix Hiring Partner — a conversational AI that interviews startup founders to build a structured hiring brief. You are warm, sharp, and sound like a senior recruiter who is actually listening, not a form.
 
-**CONVERSATION RULES:**
-1. Ask ONE question at a time, focused and conversational.
-2. Listen to the founder's answers and reflect back understanding.
-3. Build rapport — this is a conversation, not an interrogation.
-4. Keep responses brief (2-3 sentences) for mobile chat readability.
+CONVERSATION RULES:
+1. Ask ONE clear natural question at a time. Do not ask multiple questions in one turn.
+2. Briefly acknowledge the founder's prior answer before asking the next question.
+3. Sound like a human recruiter. Do not fabricate details or pretend to know things the founder has not said.
+4. Keep responses concise and conversational, 2-3 sentences max.
 
-**FIELDS YOU MUST COLLECT (in approximate order, but adapt to conversation flow):**
-1. COMPANY CONTEXT — company name, stage, industry, what problem they solve
-2. HIRING MOTIVATION — why are they hiring now? growth, replacement, new team?
-3. ROLE — job title, what the person will do day-to-day
-4. SENIORITY & OWNERSHIP — IC vs. management, budget ownership, decision-making authority
-5. REPORTING STRUCTURE — who do they report to? team size they'll manage?
-6. SUCCESS METRICS — how will we know if this hire is a win after 6 months?
-7. CANDIDATE PROFILE — MUST-HAVES — skills, experience, mindset that's non-negotiable
-8. CANDIDATE PROFILE — NICE-TO-HAVES — bonus skills or background
-9. DEAL BREAKERS — what absolutely disqualifies someone?
-10. TECHNICAL REQUIREMENTS — specific languages, frameworks, tools required?
-11. WORK STYLE & CULTURE — remote/office? communication style? pace?
-12. COMPENSATION MODEL — salary range, equity, benefits, flexibility?
-13. INTERVIEW PROCESS — how many rounds? who interviews? timeline?
-14. DECISION CHAIN — who decides? how long until offer?
-15. CANDIDATE PITCH — what's compelling about this role and company?
-16. RECRUITING STRATEGY — where to source? internal referrals? headhunter?
-17. RISK REGISTER — what could go wrong? key hiring risks?
-18. ASSUMPTION LOG — what are you assuming that might not be true?
-19. PAST HIRING SIGNAL — tell me about your last great hire. what made them great?
-20. TIMELINE — when do you need someone? hard deadline?
-21. BUDGET — total comp budget, flexibility?
-22. CONTACT — name, email, title, company website for the hiring contact
-23. OPEN QUESTIONS OR FLAGS — anything else we should know?
+QUESTION SEQUENCE (default path):
+1. Company & problem — what are they building and what problem it solves
+2. Stage & team size — funding stage, current headcount, growth trajectory
+3. The role itself — new headcount or replacement, title, one-line mandate
+4. Seniority & autonomy — experience level, IC vs management, ownership level
+5. Tech stack & key responsibilities — stack, tools, first priorities
+6. Must-have vs nice-to-have skills — technical and soft skills
+7. Location & work style — remote/hybrid/onsite, timezone, international eligibility
+8. Compensation & benefits — salary range, equity, benefits, flexibility
+9. Sourcing strategy — target companies, networks, referrals
+10. Interview process — stages, format, who interviews
+11. Decision-maker & onboarding timeline — who signs off, start date expectations
+12. Contact info — last step, structured form (name, email, title, company)
 
-**AFTER COLLECTING ALL 23 FIELDS:**
-When you have gathered substantive information on all 23 fields above (even if brief), output the hiring brief in this EXACT format. Use these EXACT labels followed by a colon, one field per line:
+After every founder message, output an updated JSON block containing only the fields you can now populate and the current completion percentage.
+The JSON must be valid and use this exact shape:
 
-INTAKE_COMPLETE
+{
+  "brief_patch": {
+    "company": "...",
+    "role": "...",
+    "seniority": "...",
+    "tech_stack": ["..."],
+    "key_responsibilities": "...",
+    "must_have_skills": "...",
+    "nice_to_have_skills": "...",
+    "disqualifiers": "...",
+    "engagement_type": "...",
+    "work_style": "...",
+    "location": "...",
+    "compensation": "...",
+    "benefits": "...",
+    "visa_sponsorship": "...",
+    "sourcing_strategy": "...",
+    "interview_process": "...",
+    "decision_maker": "...",
+    "timeline": "...",
+    "contact": "..."
+  },
+  "completion_pct": 0
+}
 
-COMPANY CONTEXT: [content]
-HIRING MOTIVATION: [content]
-ROLE: [content]
-SENIORITY & OWNERSHIP: [content]
-REPORTING STRUCTURE: [content]
-SUCCESS METRICS: [content]
-CANDIDATE PROFILE — MUST-HAVES: [content]
-CANDIDATE PROFILE — NICE-TO-HAVES: [content]
-DEAL BREAKERS: [content]
-TECHNICAL REQUIREMENTS: [content]
-WORK STYLE & CULTURE: [content]
-COMPENSATION MODEL: [content]
-INTERVIEW PROCESS: [content]
-DECISION CHAIN: [content]
-CANDIDATE PITCH: [content]
-RECRUITING STRATEGY: [content]
-RISK REGISTER: [content]
-ASSUMPTION LOG: [content]
-PAST HIRING SIGNAL: [content]
-TIMELINE: [content]
-BUDGET: [content]
-CONTACT: [content]
-OPEN QUESTIONS OR FLAGS: [content]
+Do not include other text inside the JSON block. The rest of your response may include a short conversational sentence before or after the JSON block.
 
-**CRITICAL RULES:**
-- Do NOT invent information. If they haven't answered a question, make a note like "Not yet discussed" or ask the question.
-- Do NOT output INTAKE_COMPLETE until you have asked about ALL 23 FIELDS and received substantive responses (even if some are brief).
-- Use the exact field labels and colon format shown above — this is essential for parsing.
-- Be conversational and warm — don't sound robotic.`;
+Once all required fields are populated or the founder indicates the intake is complete, send a short closing message confirming the brief is ready for review. Do not paste the full hiring brief as a text wall in chat.
+
+Critical rule: Do not invent details. Only record what the founder has said, or use explicit qualifiers like "Not yet discussed" when information is missing.`;
+
+function extractJsonFromReply(reply: string): string | null {
+  const cleaned = reply.trim();
+  const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const candidateText = codeBlockMatch?.[1] ?? cleaned;
+  const firstBrace = candidateText.indexOf("{");
+  const lastBrace = candidateText.lastIndexOf("}");
+  return firstBrace >= 0 && lastBrace > firstBrace ? candidateText.slice(firstBrace, lastBrace + 1) : null;
+}
+
+function stripJsonBlocks(reply: string): string {
+  return reply
+    .replace(/```(?:json)?[\s\S]*?```/gi, "")
+    .replace(/\{[\s\S]*\}/, "")
+    .trim();
+}
+
+interface SavedSessionState {
+  messages: Message[];
+  brief: HiringBrief | null;
+  completionPct: number;
+  sessionPhase: "chat" | "review";
+}
+
+function getSavedSessionState(sessionId: string): SavedSessionState | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const existing = localStorage.getItem(STORAGE_SESSION_STATE_KEY);
+    if (!existing) return null;
+    const parsed = JSON.parse(existing) as Record<string, SavedSessionState>;
+    return parsed[sessionId] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSessionState(sessionId: string, state: SavedSessionState) {
+  if (typeof window === "undefined") return;
+  try {
+    const existing = localStorage.getItem(STORAGE_SESSION_STATE_KEY);
+    const parsed = existing ? (JSON.parse(existing) as Record<string, SavedSessionState>) : {};
+    parsed[sessionId] = state;
+    localStorage.setItem(STORAGE_SESSION_STATE_KEY, JSON.stringify(parsed));
+  } catch {
+    // Fail silently if storage is unavailable.
+  }
+}
+
+function parseBriefPatchFromReply(reply: string): { briefPatch: Record<string, unknown>; completionPct: number } {
+  const jsonText = extractJsonFromReply(reply);
+  if (!jsonText) {
+    return { briefPatch: {}, completionPct: 0 };
+  }
+
+  try {
+    const parsed = JSON.parse(jsonText) as Record<string, unknown>;
+    const rawPatch = parsed.brief_patch && typeof parsed.brief_patch === "object" && !Array.isArray(parsed.brief_patch)
+      ? parsed.brief_patch as Record<string, unknown>
+      : {};
+
+    const completionPct = typeof parsed.completion_pct === "number"
+      ? Math.max(0, Math.min(100, Math.round(parsed.completion_pct)))
+      : 0;
+
+    return { briefPatch: rawPatch, completionPct };
+  } catch {
+    return { briefPatch: {}, completionPct: 0 };
+  }
+}
 
 // ─── Cookie / timezone utils ──────────────────────────────────────────────────
 
@@ -712,7 +769,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   const [showSidebar, setShowSidebar] = useState(true);
   const [completionPct, setCompletionPct] = useState(0);
   const [resumePromptOpen, setResumePromptOpen] = useState(false);
-  const [resumeSession, setResumeSession] = useState<{ messages: Message[]; brief: HiringBrief | null; completionPct: number } | null>(null);
+  const [resumeSession, setResumeSession] = useState<SavedSessionState | null>(null);
   const [sessionId, setSessionId] = useState<string>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem(STORAGE_SESSION_ID_KEY);
@@ -775,6 +832,16 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
   useEffect(() => { scrollToBottom(); }, [messages, loading, scrollToBottom]);
 
+  useEffect(() => {
+    if (!sessionId || typeof window === "undefined") return;
+    saveSessionState(sessionId, {
+      messages,
+      brief: hiringBrief,
+      completionPct,
+      sessionPhase,
+    });
+  }, [sessionId, messages, hiringBrief, completionPct, sessionPhase]);
+
   // ─── Modal lifecycle ──────────────────────────────────────────────────
 
   const startFreshConversation = useCallback((nextSessionId?: string) => {
@@ -798,7 +865,13 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
   }, [sessionId]);
 
   const loadExistingConversation = useCallback(async (existingSessionId: string) => {
-    // Direct session load is not available in the frontend. Start a fresh conversation for this session.
+    const stored = getSavedSessionState(existingSessionId);
+    if (stored && stored.messages.length > 0) {
+      setResumeSession(stored);
+      setResumePromptOpen(true);
+      return;
+    }
+
     startFreshConversation(existingSessionId);
   }, [startFreshConversation]);
 
@@ -849,9 +922,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
     try {
       const reply = await fetchOpenRouterReply(newMessages);
-      const briefPatch = {};
-      const serverCompletionPct = 0;
-
+      const { briefPatch, completionPct: serverCompletionPct } = parseBriefPatchFromReply(reply);
       const emailMatch = reply.match(EMAIL_REGEX);
       if (emailMatch && !detectedEmail) {
         setDetectedEmail(emailMatch[0]);
@@ -859,19 +930,24 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
 
       const patchedBrief = mergeBriefPatchIntoHiringBrief(hiringBrief, briefPatch);
       setHiringBrief(patchedBrief);
-      setCompletionPct(serverCompletionPct || Math.max(completionPct, patchedBrief ? 10 : 0));
 
-      if (reply.includes("INTAKE_COMPLETE") || serverCompletionPct >= 100) {
-        const brief = parseIntakeComplete(reply);
-        const nextBrief = mergeBriefPatchIntoHiringBrief(brief, briefPatch);
-        setHiringBrief(nextBrief);
-        setMessages(prev => [...prev, { role: "assistant" as const, content: reply }]);
-        setMessages(prev => [...prev, { role: "assistant" as const, content: "Perfect — your brief is ready for review. I’ve opened the full brief page so you can edit and send it." }]);
+      const nextCompletion = Math.max(completionPct, serverCompletionPct, patchedBrief ? 10 : 0);
+      setCompletionPct(nextCompletion);
+
+      const assistantText = stripJsonBlocks(reply) || "I’ve captured that and will keep building the brief.";
+      const isComplete = reply.includes("INTAKE_COMPLETE") || serverCompletionPct >= 100;
+
+      if (isComplete) {
+        setMessages(prev => [
+          ...prev,
+          { role: "assistant" as const, content: assistantText },
+          { role: "assistant" as const, content: "Perfect — your brief is ready for review. I’ve opened the full brief page so you can edit and send it." },
+        ]);
         setLatestAiIndex(newMessages.length + 1);
         setComplete(true);
         setSessionPhase("review");
       } else {
-        setMessages(prev => [...prev, { role: "assistant" as const, content: reply }]);
+        setMessages(prev => [...prev, { role: "assistant" as const, content: assistantText }]);
         setLatestAiIndex(newMessages.length);
       }
     } catch (err) {
@@ -946,6 +1022,7 @@ export function ChatModal({ open, onClose }: ChatModalProps) {
                           setMessages(resumeSession.messages);
                           setHiringBrief(resumeSession.brief);
                           setCompletionPct(resumeSession.completionPct);
+                          setSessionPhase(resumeSession.sessionPhase);
                           setResumePromptOpen(false);
                           setResumeSession(null);
                         }
