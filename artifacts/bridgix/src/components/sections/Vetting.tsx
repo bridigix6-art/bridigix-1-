@@ -2,18 +2,20 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useInView } from "../../hooks/use-in-view";
 
+const signatureGradient = "linear-gradient(90deg, #F5C518 0%, #34D399 50%, #1A7A4A 100%)";
+
 const stages = [
   {
     title: "Application & CV Screen",
     body: "We review their CV, LinkedIn, and GitHub. We look for consistent experience, real projects, and signals they have worked in fast-moving environments. Communication quality in their application matters — engineers who cannot write clearly often cannot communicate in a remote team.",
     pill: "60% filtered out here",
-    pillBg: "rgba(245,200,66,0.14)",
-    pillText: "#b45309",
-    pillBorder: "rgba(245,200,66,0.35)",
-    glowColor: "rgba(245,200,66,0.06)",
-    topBar: "linear-gradient(90deg, #F5C518, #34D399, transparent)",
-    checkColor: "#d97706",
-    gradBorder: "linear-gradient(140deg, #F5C518 0%, #34D399 60%, #1A7A4A 100%)",
+    pillBg: "rgba(52,211,153,0.12)",
+    pillText: "#1A7A4A",
+    pillBorder: "rgba(52,211,153,0.28)",
+    glowColor: "rgba(52,211,153,0.06)",
+    topBar: signatureGradient,
+    checkColor: "#1A7A4A",
+    gradBorder: signatureGradient,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -27,11 +29,11 @@ const stages = [
     title: "20-Minute Screening Call",
     body: "A real conversation — not a script — about how they work, what they have built, and how they handle ambiguity. We are listening for ownership mentality, not just technical vocabulary.",
     pill: "20% filtered out here",
-    pillBg: "rgba(52,211,153,0.12)",
+    pillBg: "rgba(52,211,153,0.16)",
     pillText: "#1A7A4A",
-    pillBorder: "rgba(52,211,153,0.30)",
+    pillBorder: "rgba(52,211,153,0.34)",
     glowColor: "rgba(26,122,74,0.06)",
-    topBar: "linear-gradient(90deg, #34D399, #1A7A4A, transparent)",
+    topBar: signatureGradient,
     checkColor: "#1A7A4A",
     gradBorder: "linear-gradient(140deg, #34D399 0%, #1A7A4A 50%, #F5C518 100%)",
     icon: (
@@ -62,11 +64,11 @@ const stages = [
     title: "Availability & Intent Confirmation",
     body: "We confirm genuine availability, timeline to join, salary expectations, and what they are optimising for next. There is no point placing someone brilliant who takes six months to start or leaves in 90 days.",
     pill: "Top 5% enter the network",
-    pillBg: "rgba(52,211,153,0.12)",
+    pillBg: "rgba(52,211,153,0.22)",
     pillText: "#1A7A4A",
-    pillBorder: "rgba(52,211,153,0.30)",
+    pillBorder: "rgba(52,211,153,0.42)",
     glowColor: "rgba(26,122,74,0.08)",
-    topBar: "linear-gradient(90deg, #34D399, #1A7A4A, transparent)",
+    topBar: signatureGradient,
     checkColor: "#1A7A4A",
     gradBorder: "linear-gradient(140deg, #34D399 0%, #1A7A4A 50%, #F5C518 100%)",
     icon: (
@@ -156,8 +158,8 @@ export function Vetting() {
                   borderRadius: "18px",
                   padding: "1px",
                   background: isFocused
-                    ? "linear-gradient(140deg, rgba(245,200,66,0.09) 0%, rgba(52,211,153,0.08) 55%, rgba(26,122,74,0.09) 100%)"
-                    : "linear-gradient(140deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)",
+                    ? signatureGradient
+                    : "linear-gradient(140deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)",
                   opacity: isBlurred ? 0.35 : 1,
                   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                   transform: isFocused ? "scale(1.015)" : isBlurred ? "scale(0.99)" : "scale(1)",

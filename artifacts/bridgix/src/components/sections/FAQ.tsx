@@ -69,8 +69,8 @@ export function FAQ() {
                 style={{
                   borderRadius: "14px",
                   border: isOpen ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(0,0,0,0.07)",
-                  background: isOpen ? "#FFFFFF" : "rgba(255,255,255,0.7)",
-                  boxShadow: isOpen ? "0 4px 20px rgba(0,0,0,0.06)" : "0 1px 4px rgba(0,0,0,0.03)",
+                  background: isOpen ? "#FFFFFF" : "rgba(255,255,255,0.76)",
+                  boxShadow: isOpen ? "0 10px 28px rgba(0,0,0,0.06)" : "0 2px 10px rgba(0,0,0,0.03)",
                   overflow: "hidden",
                   transition: "all 0.3s ease",
                 }}

@@ -13,14 +13,15 @@ const urgencyOptions = ["ASAP", "Within 30 days", "Within 90 days", "Flexible"];
 const interviewRoundsOptions = ["1", "2", "3", "4+"];
 const sponsorshipOptions = ["Yes", "No", "Case-by-case"];
 const yesNoOptions = ["Yes", "No"];
+const sectionTitleClass = "text-[20px] sm:text-[22px] font-semibold tracking-[-0.02em] text-[#0A0A0A]";
 
 function Field({ label, error, optional, children }: { label: string; error?: string; optional?: boolean; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <label className="text-[13px] font-medium text-[#0A0A0A]" style={{ fontFamily: "'Inter', sans-serif" }}>{label}</label>
+        <label className="text-[13px] md:text-[14px] font-medium leading-[1.35] text-[#1F1F1F]" style={{ fontFamily: "'Inter', sans-serif" }}>{label}</label>
         {optional && (
-          <span className="text-[11px] text-[#9B9B9B]" style={{ fontFamily: "'Inter', sans-serif" }}>optional</span>
+          <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-[#A7A7A7]" style={{ fontFamily: "'Inter', sans-serif" }}>optional</span>
         )}
       </div>
       {children}
@@ -41,6 +42,7 @@ const inputStyle = (hasError?: boolean): React.CSSProperties => ({
   transition: "border-color 0.2s, box-shadow 0.2s",
   background: "#FAFAF8",
   boxSizing: "border-box" as const,
+  boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
 });
 
 function SelectField({ options, value, onChange, placeholder, error }: { options: string[]; value: string; onChange: (v: string) => void; placeholder?: string; error?: boolean }) {
@@ -286,7 +288,7 @@ export default function RecruiterIntakePage() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mb-10 text-center">
-            <h1 className="text-[36px] font-semibold tracking-[-0.04em] text-[#0A0A0A]" style={{ fontFamily: "'Inter', sans-serif" }}>
+            <h1 className="text-[36px] font-semibold tracking-[-0.04em] text-[#0A0A0A]" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
               Recruiter Intake Form
             </h1>
             <p className="mx-auto mt-3 max-w-[640px] text-[15px] leading-[1.65] text-[#6B6B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -297,7 +299,7 @@ export default function RecruiterIntakePage() {
           <form onSubmit={handleSubmit} className="space-y-6 rounded-[24px] border border-[#F0F0EE] bg-white p-6 shadow-[0_4px_32px_rgba(0,0,0,0.05)] md:p-10">
             <div className="space-y-6">
               <div className="space-y-2">
-                <h2 className="text-[18px] font-medium tracking-[-0.02em] text-[#0A0A0A]" style={{ fontFamily: "'Inter', sans-serif" }}>Role basics</h2>
+                <h2 className={`${sectionTitleClass}`} style={{ fontFamily: "'Cormorant Garamond', serif" }}>Role basics</h2>
                 <div className="grid gap-6 md:grid-cols-2">
                   <Field label="What's the job title for this role?" error={errors.jobTitle}>
                     <input value={form.jobTitle} onChange={updateField("jobTitle")} placeholder="Senior Frontend Engineer" style={inputStyle(!!errors.jobTitle)} />
@@ -317,7 +319,7 @@ export default function RecruiterIntakePage() {
               </div>
 
               <div className="space-y-6">
-                <h2 className="text-[18px] font-medium tracking-[-0.02em] text-[#0A0A0A]" style={{ fontFamily: "'Inter', sans-serif" }}>The role itself</h2>
+                <h2 className={`${sectionTitleClass} mt-8 border-t border-[#ECEBE8] pt-8`} style={{ fontFamily: "'Cormorant Garamond', serif" }}>The role itself</h2>
                 <Field label="In one or two sentences, how would you describe this role?" error={errors.roleDescription}>
                   <textarea value={form.roleDescription} onChange={updateField("roleDescription")} rows={3} placeholder="Describe the role in one or two sentences." style={{ ...inputStyle(!!errors.roleDescription), resize: "vertical", minHeight: 90 }} />
                 </Field>
@@ -341,7 +343,7 @@ export default function RecruiterIntakePage() {
               </div>
 
               <div className="space-y-6">
-                <h2 className="text-[18px] font-medium tracking-[-0.02em] text-[#0A0A0A]" style={{ fontFamily: "'Inter', sans-serif" }}>Logistics</h2>
+                <h2 className={`${sectionTitleClass} mt-8 border-t border-[#ECEBE8] pt-8`} style={{ fontFamily: "'Cormorant Garamond', serif" }}>Logistics</h2>
                 <div className="grid gap-6 md:grid-cols-2">
                   <Field label="How many positions are you looking to fill?" error={errors.headcount}>
                     <input type="number" min="1" value={form.headcount} onChange={updateField("headcount")} placeholder="1" style={inputStyle(!!errors.headcount)} />
@@ -354,11 +356,17 @@ export default function RecruiterIntakePage() {
                   <div className="flex flex-col gap-3 md:flex-row md:items-start">
                     <div className="flex-1">
                       <label className="mb-1.5 block text-[12px] text-[#6B6B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>Min</label>
-                      <input type="number" min="0" value={form.salaryMin} onChange={updateField("salaryMin")} placeholder="50000" style={inputStyle()} disabled={form.keepSalaryConfidential} />
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6B6B6B]">CAD</span>
+                        <input type="number" min="0" value={form.salaryMin} onChange={updateField("salaryMin")} placeholder="50000" style={{ ...inputStyle(), paddingLeft: 48 }} disabled={form.keepSalaryConfidential} />
+                      </div>
                     </div>
                     <div className="flex-1">
                       <label className="mb-1.5 block text-[12px] text-[#6B6B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>Max</label>
-                      <input type="number" min="0" value={form.salaryMax} onChange={updateField("salaryMax")} placeholder="80000" style={inputStyle()} disabled={form.keepSalaryConfidential} />
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6B6B6B]">CAD</span>
+                        <input type="number" min="0" value={form.salaryMax} onChange={updateField("salaryMax")} placeholder="80000" style={{ ...inputStyle(), paddingLeft: 48 }} disabled={form.keepSalaryConfidential} />
+                      </div>
                     </div>
                   </div>
                   <label className="mt-2 flex items-center gap-2 text-[13px] text-[#0A0A0A]" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -370,14 +378,16 @@ export default function RecruiterIntakePage() {
                   <SelectField options={["Select interview rounds", ...interviewRoundsOptions]} value={form.interviewRounds} onChange={(value) => setForm((current) => ({ ...current, interviewRounds: value }))} placeholder="Select interview rounds" error={!!errors.interviewRounds} />
                 </Field>
                 <Field label="Are there any dealbreakers or red flags we should screen for?" optional>
-                  <textarea value={form.redFlags} onChange={updateField("redFlags")} rows={4} placeholder="Optional red flags or blockers." style={{ ...inputStyle(), resize: "vertical", minHeight: 110 }} />
+                  <textarea value={form.redFlags} onChange={updateField("redFlags")} rows={3} placeholder="Optional red flags or blockers." style={{ ...inputStyle(), resize: "vertical", minHeight: 88 }} />
                 </Field>
               </div>
 
               <div className="space-y-6">
-                <h2 className="text-[18px] font-medium tracking-[-0.02em] text-[#0A0A0A]" style={{ fontFamily: "'Inter', sans-serif" }}>Optional</h2>
+                <h2 className={`${sectionTitleClass} mt-8 border-t border-[#ECEBE8] pt-8`} style={{ fontFamily: "'Cormorant Garamond', serif" }}>Optional context</h2>
                 <Field label="Is there anything about your team's culture or working style candidates should know?" optional>
-                  <textarea value={form.culture} onChange={updateField("culture")} rows={4} placeholder="Optional team context or working style." style={{ ...inputStyle(), resize: "vertical", minHeight: 110 }} />
+                  <div className="rounded-[14px] border border-dashed border-[#E8E5DB] bg-[#FCFCFA] p-4 md:p-5">
+                    <textarea value={form.culture} onChange={updateField("culture")} rows={3} placeholder="Optional team context or working style." style={{ ...inputStyle(), resize: "vertical", minHeight: 88, background: "#FCFCFA" }} />
+                  </div>
                 </Field>
                 <div className="grid gap-6 md:grid-cols-2">
                   <Field label="Does this role offer visa sponsorship?" error={errors.visaSponsorship}>
@@ -391,7 +401,7 @@ export default function RecruiterIntakePage() {
             </div>
 
             <div className="space-y-6">
-              <h2 className="text-[18px] font-medium tracking-[-0.02em] text-[#0A0A0A]" style={{ fontFamily: "'Inter', sans-serif" }}>Contact info</h2>
+              <h2 className={`${sectionTitleClass} mt-8 border-t border-[#ECEBE8] pt-8`} style={{ fontFamily: "'Cormorant Garamond', serif" }}>Contact info</h2>
               <div className="grid gap-6 md:grid-cols-2">
                 <Field label="Your full name" error={errors.contactName}>
                   <input value={form.contactName} onChange={updateField("contactName")} placeholder="Alex Morgan" style={inputStyle(!!errors.contactName)} />

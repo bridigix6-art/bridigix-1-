@@ -15,29 +15,6 @@ const roles = [
   { label: "Founding Engineers" },
 ];
 
-const layout: { roles: string[]; xOffset: number; rowYOffset: number[] }[] = [
-  {
-    roles: ["Backend Engineers", "Frontend Engineers", "Full Stack Engineers"],
-    xOffset: -18,
-    rowYOffset: [0, 3, -3],
-  },
-  {
-    roles: ["AI/ML Engineers", "Mobile Engineers", "DevOps Engineers"],
-    xOffset: 28,
-    rowYOffset: [-2, 0, 4],
-  },
-  {
-    roles: ["Cloud Engineers", "Data Engineers", "Engineering Leaders"],
-    xOffset: -8,
-    rowYOffset: [3, -2, 0],
-  },
-  {
-    roles: ["Founding Engineers"],
-    xOffset: 0,
-    rowYOffset: [0],
-  },
-];
-
 const roleData = Object.fromEntries(roles.map(r => [r.label, r]));
 
 export function RolesWePlace() {
@@ -97,69 +74,29 @@ export function RolesWePlace() {
           initial={{ opacity: 0, y: 14 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.12 }}
-          className="flex flex-col items-center gap-3"
+          className="mx-auto flex max-w-[860px] flex-wrap justify-center gap-3"
         >
-          {layout.map((row, rowIndex) => (
-            <div
-              key={rowIndex}
-              className="flex flex-wrap justify-center gap-2.5"
-              style={{ transform: `translateX(${row.xOffset}px)` }}
+          {roles.map((role, index) => (
+            <motion.div
+              key={role.label}
+              initial={{ opacity: 0, y: 10 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.45, delay: 0.18 + index * 0.04 }}
+              className="relative min-w-[168px] cursor-default rounded-[12px] border border-white/10 bg-[linear-gradient(180deg,rgba(62,62,62,0.97),rgba(22,22,22,0.98))] px-5 py-3 text-center shadow-[0_6px_24px_rgba(0,0,0,0.45)] transition-all duration-250 hover:-translate-y-0.5 hover:border-emerald-400/40 hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)]"
+              whileHover={{ scale: 1.01, transition: { duration: 0.18 } }}
             >
-              {row.roles.map((roleName, j) => {
-                const role = roleData[roleName];
-                if (!role) return null;
-                return (
-                  <motion.div
-                    key={j}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={isInView ? { opacity: 1, y: row.rowYOffset[j] ?? 0 } : {}}
-                    transition={{ duration: 0.45, delay: 0.18 + rowIndex * 0.07 + j * 0.04 }}
-                    className="cursor-default transition-all duration-250 relative"
-                    style={{
-                      background: "linear-gradient(180deg, rgba(62,62,62,0.97) 0%, rgba(22,22,22,0.98) 100%)",
-                      border: "1px solid rgba(255,255,255,0.10)",
-                      borderRadius: "10px",
-                      padding: "11px 22px",
-                      boxShadow: [
-                        "0 4px 20px rgba(0,0,0,0.55)",
-                        "0 1px 0 rgba(255,255,255,0.07) inset",
-                        "0 -1px 0 rgba(0,0,0,0.4) inset",
-                      ].join(", "),
-                    }}
-                    whileHover={{
-                      background: "linear-gradient(180deg, rgba(72,72,72,0.98) 0%, rgba(28,28,28,0.99) 100%)",
-                      boxShadow: [
-                        "0 6px 28px rgba(0,0,0,0.65)",
-                        "0 1px 0 rgba(255,255,255,0.09) inset",
-                        "0 -1px 0 rgba(0,0,0,0.4) inset",
-                        "0 0 18px rgba(52,211,153,0.08)",
-                      ].join(", "),
-                      y: (row.rowYOffset[j] ?? 0) - 2,
-                      transition: { duration: 0.18 },
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontFamily: "'Inter', sans-serif",
-                        fontSize: 13.5,
-                        fontWeight: 400,
-                        color: "rgba(255,255,255,0.92)",
-                        whiteSpace: "nowrap",
-                        textShadow: [
-                          "-0.5px -0.5px 0 rgba(0,0,0,0.55)",
-                          "0.5px -0.5px 0 rgba(0,0,0,0.55)",
-                          "-0.5px 0.5px 0 rgba(0,0,0,0.55)",
-                          "0.5px 0.5px 0 rgba(0,0,0,0.55)",
-                        ].join(", "),
-                        letterSpacing: "0.005em",
-                      }}
-                    >
-                      {role.label}
-                    </span>
-                  </motion.div>
-                );
-              })}
-            </div>
+              <span
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 13.5,
+                  fontWeight: 400,
+                  color: "rgba(255,255,255,0.92)",
+                  letterSpacing: "0.005em",
+                }}
+              >
+                {role.label}
+              </span>
+            </motion.div>
           ))}
         </motion.div>
       </div>

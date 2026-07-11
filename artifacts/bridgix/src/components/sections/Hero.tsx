@@ -30,7 +30,7 @@ function useCountUp(target: number, trigger: boolean) {
 const heroCards = [
   {
     photo: jonathanPhoto,
-    name: "Jonathan Taylor",
+    name: "Jonathan T.",
     role: "Backend Developer",
     accentGrad: "linear-gradient(90deg, #1A7A4A 0%, #34D399 50%, #F5C518 100%)",
     ringColor: "#1A7A4A",
@@ -46,7 +46,7 @@ const heroCards = [
   },
   {
     photo: sofiaPhoto,
-    name: "Sofia Fisher",
+    name: "Sofia F.",
     role: "Full Stack Engineer",
     accentGrad: "linear-gradient(90deg, #155E39 0%, #1A7A4A 50%, #34D399 100%)",
     ringColor: "#1A7A4A",
@@ -280,18 +280,26 @@ export function Hero() {
                     <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: card.accentGrad }} />
 
                     <div className="flex items-center gap-3">
-                      <img
-                        src={card.photo}
-                        alt={card.name}
+                      <div
+                        className="rounded-full p-[2px]"
                         style={{
-                          width: 42, height: 42,
-                          borderRadius: "50%",
-                          objectFit: "cover",
-                          objectPosition: "top",
-                          flexShrink: 0,
-                          boxShadow: `0 0 0 2px #FFFFFF, 0 0 0 3.5px ${card.ringColor}`,
+                          background: `linear-gradient(135deg, ${card.ringColor}, rgba(255,255,255,0.85))`,
+                          boxShadow: `0 0 0 1px rgba(255,255,255,0.9), 0 8px 20px rgba(0,0,0,0.08)`,
                         }}
-                      />
+                      >
+                        <img
+                          src={card.photo}
+                          alt={card.name}
+                          style={{
+                            width: 46, height: 46,
+                            borderRadius: "50%",
+                            objectFit: "cover",
+                            objectPosition: "center",
+                            flexShrink: 0,
+                            background: "linear-gradient(135deg, rgba(245,200,66,0.12), rgba(26,122,74,0.12))",
+                          }}
+                        />
+                      </div>
                       <div>
                         <div className="text-[13px] text-[#0A0A0A] leading-tight" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 500 }}>
                           {card.name}

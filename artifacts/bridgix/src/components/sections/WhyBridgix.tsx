@@ -2,14 +2,16 @@ import { useRef, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useInView } from "../../hooks/use-in-view";
 
+const signatureGradient = "linear-gradient(90deg, #F5C518 0%, #34D399 50%, #1A7A4A 100%)";
+
 const cells = [
   {
     title: "People-First Hiring",
     body: "We believe hiring is about people, not pipelines. Every founder deserves care, attention, and a process that respects the stakes involved.",
-    borderGrad: "linear-gradient(135deg, #1A7A4A 0%, #34D399 50%, #F5C518 100%)",
+    borderGrad: signatureGradient,
     glowColor: "rgba(26,122,74,0.07)",
     dotColor: "#1A7A4A",
-    topBar: "linear-gradient(90deg, #1A7A4A, #34D399)",
+    topBar: signatureGradient,
     side: "left",
     widthFactor: "58%",
     yOffset: 0,
@@ -26,10 +28,10 @@ const cells = [
   {
     title: "Real Match Quality",
     body: "We don't fill roles. We get the fit right. That means understanding how someone works, what they have built, and whether they genuinely belong on your team.",
-    borderGrad: "linear-gradient(135deg, #F5C518 0%, #34D399 50%, #1A7A4A 100%)",
+    borderGrad: signatureGradient,
     glowColor: "rgba(245,200,66,0.07)",
     dotColor: "#1A7A4A",
-    topBar: "linear-gradient(90deg, #F5C518, #34D399)",
+    topBar: signatureGradient,
     side: "right",
     widthFactor: "48%",
     yOffset: -12,
@@ -43,10 +45,10 @@ const cells = [
   {
     title: "Clarity at Every Step",
     body: "No black box. You always know what we are doing, why we are doing it, and what comes next. Hiring should feel collaborative, not opaque.",
-    borderGrad: "linear-gradient(135deg, #34D399 0%, #1A7A4A 60%, #F5C518 100%)",
+    borderGrad: signatureGradient,
     glowColor: "rgba(52,211,153,0.06)",
     dotColor: "#1A7A4A",
-    topBar: "linear-gradient(90deg, #34D399, #1A7A4A)",
+    topBar: signatureGradient,
     side: "left",
     widthFactor: "54%",
     yOffset: 6,
@@ -62,10 +64,10 @@ const cells = [
   {
     title: "Founder-Built Thinking",
     body: "We built Bridigix inside the same pressure founders live in. That is why everything we do removes friction, not adds process.",
-    borderGrad: "linear-gradient(135deg, #F5C518 0%, #34D399 40%, #1A7A4A 100%)",
+    borderGrad: signatureGradient,
     glowColor: "rgba(245,200,66,0.08)",
     dotColor: "#1A7A4A",
-    topBar: "linear-gradient(90deg, #F5C518, #34D399)",
+    topBar: signatureGradient,
     side: "right",
     widthFactor: "52%",
     yOffset: 0,
@@ -107,10 +109,10 @@ function TimelineCard({ cell, index, isInView }: { cell: typeof cells[0]; index:
           }}
         >
           <div
-            className="relative bg-white rounded-[19px] overflow-hidden cursor-default"
+            className="relative overflow-hidden rounded-[19px] bg-white/95 backdrop-blur-sm cursor-default"
             style={{
               padding: cell.padding,
-              boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+              boxShadow: "0 18px 48px rgba(0,0,0,0.08)",
             }}
           >
             <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: cell.topBar }} />
@@ -228,8 +230,9 @@ export function WhyBridgix() {
             width: "2px",
             height: `${lineHeight}px`,
             maxHeight: "100%",
-            background: "linear-gradient(to bottom, transparent 0%, rgba(26,122,74,0.25) 10%, rgba(26,122,74,0.20) 80%, transparent 100%)",
+            background: "linear-gradient(to bottom, rgba(245,200,66,0.08) 0%, rgba(52,211,153,0.22) 45%, rgba(26,122,74,0.18) 100%)",
             transition: "height 0.08s linear",
+            boxShadow: "0 0 18px rgba(52,211,153,0.08)",
           }} />
 
           {isInView && (

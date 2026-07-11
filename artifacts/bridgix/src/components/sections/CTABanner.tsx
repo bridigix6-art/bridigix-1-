@@ -124,14 +124,14 @@ function HalfEarthGlobe() {
       ))}
 
       {/* Central Bridgix node */}
-      <circle cx={cx} cy={cy} r={28} fill="rgba(26,122,74,0.18)" stroke="rgba(52,211,153,0.5)" strokeWidth="1.5" filter="url(#node-glow)" />
-      <circle cx={cx} cy={cy} r={20} fill="rgba(26,122,74,0.28)" stroke="rgba(52,211,153,0.35)" strokeWidth="1" />
+      <circle cx={cx} cy={cy} r={34} fill="rgba(26,122,74,0.16)" stroke="rgba(52,211,153,0.55)" strokeWidth="1.6" filter="url(#node-glow)" />
+      <circle cx={cx} cy={cy} r={24} fill="rgba(26,122,74,0.28)" stroke="rgba(52,211,153,0.38)" strokeWidth="1" />
       <text x={cx} y={cy - 5} textAnchor="middle" fontSize="7" fill="rgba(255,255,255,0.45)" fontFamily="Inter, sans-serif" letterSpacing="0.1em">BRIDGIX</text>
       <text x={cx} y={cy + 7} textAnchor="middle" fontSize="9" fill="rgba(52,211,153,0.85)" fontFamily="Inter, sans-serif" fontWeight="600">3000+</text>
 
       {/* Pulse animation on center node */}
-      <circle cx={cx} cy={cy} r="28" fill="none" stroke="rgba(52,211,153,0.3)" strokeWidth="1">
-        <animate attributeName="r" values="28;46;28" dur="3.2s" repeatCount="indefinite"/>
+      <circle cx={cx} cy={cy} r="34" fill="none" stroke="rgba(52,211,153,0.3)" strokeWidth="1">
+        <animate attributeName="r" values="34;52;34" dur="3.2s" repeatCount="indefinite"/>
         <animate attributeName="opacity" values="0.3;0;0.3" dur="3.2s" repeatCount="indefinite"/>
       </circle>
 
