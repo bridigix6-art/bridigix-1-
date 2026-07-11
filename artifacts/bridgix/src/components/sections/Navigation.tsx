@@ -2,14 +2,12 @@ import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { useLocation } from "wouter";
 import logoImage from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
-import { FindEngineerChoiceModal } from "../modals/FindEngineerChoiceModal";
 
 export function Navigation() {
   const [, navigate] = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [choiceOpen, setChoiceOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => {
@@ -36,12 +34,6 @@ export function Navigation() {
 
   return (
     <>
-      <FindEngineerChoiceModal
-        open={choiceOpen}
-        onClose={() => setChoiceOpen(false)}
-        onChooseForm={() => navigate("/recruiter-intake")}
-        onChooseChat={() => window.location.assign(import.meta.env.BASE_URL || "/")}
-      />
       <div
         style={{
           position: "fixed", top: 0, left: 0, height: "2px", zIndex: 9999,
@@ -117,7 +109,7 @@ export function Navigation() {
 
             <div className="hidden md:flex items-center gap-3">
               <button
-                onClick={() => setChoiceOpen(true)}
+                onClick={() => navigate("/recruiter-intake")}
                 className="text-white font-normal text-[13px] cursor-pointer"
                 style={{
                   borderRadius: "100px",
@@ -176,7 +168,7 @@ export function Navigation() {
               </a>
             ))}
             <button
-              onClick={() => setChoiceOpen(true)}
+              onClick={() => navigate("/recruiter-intake")}
               className="text-white font-normal text-[15px] py-[14px] px-[24px] mt-4 cursor-pointer"
               style={{ borderRadius: "100px", background: "linear-gradient(135deg, #1A7A4A, #155E39)" }}
             >

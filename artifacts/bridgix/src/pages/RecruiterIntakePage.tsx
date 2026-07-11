@@ -2,7 +2,6 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { Navigation } from "@/components/sections/Navigation";
-import { ChatModal } from "@/components/modals/ChatModal";
 import { supabase } from "@/lib/supabase";
 
 const employmentOptions = ["Full-time", "Part-time", "Contract", "Internship"];
@@ -110,7 +109,6 @@ function SelectField({ options, value, onChange, placeholder, error }: { options
 export default function RecruiterIntakePage() {
   const [, setLocation] = useLocation();
   const [submitted, setSubmitted] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -232,7 +230,6 @@ export default function RecruiterIntakePage() {
   if (submitted) {
     return (
       <div className="min-h-screen" style={{ background: "#FAFAF8" }}>
-        <ChatModal open={chatOpen} onClose={() => setChatOpen(false)} />
         <Navigation />
         <main className="px-4 pb-[80px] pt-[120px]">
           <div className="mx-auto max-w-[760px] rounded-[24px] border border-[#F0F0EE] bg-white p-8 shadow-[0_4px_32px_rgba(0,0,0,0.05)] md:p-10">
@@ -246,7 +243,7 @@ export default function RecruiterIntakePage() {
               Thanks for sharing the role.
             </h1>
             <p className="mt-4 max-w-[620px] text-[15px] leading-[1.75] text-[#4A4A4A]" style={{ fontFamily: "'Inter', sans-serif" }}>
-              We’ll review your intake and follow up with the next steps. If you’d rather keep talking live, you can also return to the chat experience at any time.
+              We’ll review your intake and follow up with the next steps.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
@@ -257,14 +254,6 @@ export default function RecruiterIntakePage() {
               >
                 Back home
               </button>
-              <button
-                type="button"
-                onClick={() => setChatOpen(true)}
-                className="rounded-[12px] bg-[#0A0A0A] px-5 py-3 text-[14px] font-medium text-white transition-colors duration-200 hover:bg-[#1A7A4A]"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                Continue to chat
-              </button>
             </div>
           </div>
         </main>
@@ -274,7 +263,6 @@ export default function RecruiterIntakePage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#FAFAF8" }}>
-      <ChatModal open={chatOpen} onClose={() => setChatOpen(false)} />
       <Navigation />
       <main className="px-4 pb-[80px] pt-[120px]">
         <div className="mx-auto max-w-[860px]">

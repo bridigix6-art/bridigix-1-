@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { useInView } from "../../hooks/use-in-view";
-import { ChatModal } from "../modals/ChatModal";
-import { FindEngineerChoiceModal } from "../modals/FindEngineerChoiceModal";
 import jonathanPhoto from "@assets/pexels-salvador-olague-682304070-18032391_1780481869516.jpg";
 import hennaPhoto from "@assets/pexels-mikhail-nilov-8730389_1780508877001_1780625194226.jpg";
 import sofiaPhoto from "@assets/pexels-jessica-stefany-m-1002024697-31512052_1780456563453.jpg";
@@ -65,19 +63,9 @@ export function Hero() {
   const engineersCount = useCountUp(3000, isInView);
   const acceptanceCount = useCountUp(5, isInView);
   const [, navigate] = useLocation();
-  const [choiceOpen, setChoiceOpen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
 
   return (
     <>
-      <FindEngineerChoiceModal
-        open={choiceOpen}
-        onClose={() => setChoiceOpen(false)}
-        onChooseForm={() => navigate("/recruiter-intake")}
-        onChooseChat={() => setChatOpen(true)}
-      />
-      <ChatModal open={chatOpen} onClose={() => setChatOpen(false)} />
-
       <section
         className="relative pt-[108px] pb-[56px] px-6 flex items-center overflow-hidden"
         ref={ref as React.RefObject<HTMLDivElement>}
@@ -148,7 +136,7 @@ export function Hero() {
               className="flex flex-row gap-[10px] mb-10"
             >
               <button
-                onClick={() => setChoiceOpen(true)}
+                onClick={() => navigate("/recruiter-intake")}
                 className="text-white text-[14px] transition-all duration-200 cursor-pointer"
                 style={{
                   fontFamily: "'Inter', sans-serif",
