@@ -33,8 +33,9 @@ export function Footer() {
   const quickLinks = [
     { label: "How it works", href: "#how-it-works" },
     { label: "Vetting", href: "#vetting" },
-    { label: "Why Bridigix", href: "#why-bridgix" },
+    { label: "Why Bridigix", href: "#why-bridigix" },
     { label: "FAQ", href: "#faq" },
+    { label: "Start intake", href: "/recruiter-intake" },
     { label: "Join Network", href: "/join" },
   ];
 
@@ -148,6 +149,16 @@ export function Footer() {
                     </button>
                   </form>
                 )}
+              </div>
+
+              <div className="mt-6">
+                <a
+                  href="/recruiter-intake"
+                  className="inline-flex items-center justify-center rounded-full bg-[#1A7A4A] px-4 py-2 text-[13px] font-medium text-white transition duration-200 hover:bg-[#239a5d]"
+                  style={{ fontFamily: "'Inter', sans-serif" }}
+                >
+                  Start intake
+                </a>
               </div>
 
               {/* Social */}

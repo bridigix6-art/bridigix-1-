@@ -160,9 +160,10 @@ export function Vetting() {
                   background: isFocused
                     ? signatureGradient
                     : "linear-gradient(140deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)",
-                  opacity: isBlurred ? 0.35 : 1,
+                  opacity: isBlurred ? 0.55 : 1,
                   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  transform: isFocused ? "scale(1.015)" : isBlurred ? "scale(0.99)" : "scale(1)",
+                  transform: isFocused ? "scale(1.01)" : isBlurred ? "scale(0.995)" : "scale(1)",
+                  boxShadow: isFocused ? "0 18px 45px rgba(0,0,0,0.22)" : "none",
                 }}
               >
                 <div

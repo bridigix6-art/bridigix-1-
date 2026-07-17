@@ -8,6 +8,21 @@ import jonathanPhoto from "@assets/pexels-salvador-olague-682304070-18032391_178
 import hennaPhoto from "@assets/pexels-mikhail-nilov-8730389_1780508877001_1780625194226.jpg";
 import bridgixLogo from "@assets/Screenshot_2026-06-04-07-57-10-533_com.canva.editor-edit_17805_1780625194177.jpg";
 
+function RecruiterIntakeMockup() {
+  const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+  const screenshotSrc = `${baseUrl}/Screenshot_2026-07-04-05-26-48-611_com.canva.editor-edit.jpg`;
+
+  return (
+    <div className="h-full flex rounded-[14px] overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #EBEBEA" }}>
+      <img
+        src={screenshotSrc}
+        alt="Recruiter Intake form screenshot"
+        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", display: "block", imageRendering: "auto" }}
+      />
+    </div>
+  );
+}
+
 function ChatMockup() {
   return (
     <div className="h-full flex flex-col rounded-[14px] overflow-hidden" style={{ background: "#FAFAF8", border: "1px solid #EBEBEA" }}>
@@ -181,7 +196,6 @@ function ShortlistMockup() {
             <img src={bridgixLogo} alt="Bridigix" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
           </div>
           <span className="text-[9px] text-[#6B6B6B]">hareem@bridigix.org</span>
-          <span className="text-[8px] ml-auto px-1.5 py-0.5 rounded-full" style={{ background: "rgba(245,200,66,0.15)", color: "#d97706" }}>72hr ⚡</span>
         </div>
         <p className="text-[11px] font-medium text-[#0A0A0A]">Your Engineer Shortlist — 3 Matched Profiles</p>
       </div>
@@ -302,9 +316,9 @@ function GuaranteeMockup() {
 const steps = [
   {
     title: "Tell us what you're building",
-    body: "Have a 5-minute conversation — no forms, no calls to schedule. Tell us what you're building, who you need, and what's gone wrong before. We take it from there.",
+    body: "We talk for 5 minutes. No forms, no scheduling. You tell us what you're building, who you need, and what hasn’t worked before.",
     badge: "5 min · No scheduling",
-    Mockup: ChatMockup,
+    Mockup: RecruiterIntakeMockup,
   },
   {
     title: "We find the right people.",

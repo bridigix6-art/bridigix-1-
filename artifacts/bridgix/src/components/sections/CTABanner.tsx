@@ -29,7 +29,7 @@ function HalfEarthGlobe() {
 
   const engineerNodes = [
     { x: 60, y: 90, label: "J.T", color: "#34D399", r: 14, glow: "rgba(52,211,153,0.25)" },
-    { x: 295, y: 110, label: "H.M", color: "#F5C518", r: 12, glow: "rgba(245,200,66,0.20)" },
+    { x: 295, y: 110, label: "H.M", color: "#34D399", r: 12, glow: "rgba(52,211,153,0.20)" },
     { x: 40, y: 230, label: "S.F", color: "#34D399", r: 11, glow: "rgba(52,211,153,0.20)" },
     { x: 310, y: 260, label: "A.K", color: "#1A7A4A", r: 10, glow: "rgba(26,122,74,0.25)" },
     { x: 170, y: 45, label: "M.R", color: "#34D399", r: 9, glow: "rgba(52,211,153,0.18)" },
