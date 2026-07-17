@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { Navigation } from "@/components/sections/Navigation";
-import { supabase } from "@/lib/supabase";
+import { apiEndpoint } from "@/lib/api";
 
 const employmentOptions = ["Full-time", "Part-time", "Contract", "Internship"];
 const locationOptions = ["Remote", "Hybrid", "Onsite"];
@@ -12,7 +12,13 @@ const urgencyOptions = ["ASAP", "Within 30 days", "Within 90 days", "Flexible"];
 const interviewRoundsOptions = ["1", "2", "3", "4+"];
 const sponsorshipOptions = ["Yes", "No", "Case-by-case"];
 const yesNoOptions = ["Yes", "No"];
+const currencyOptions = ["USD", "CAD", "EUR", "INR"];
 const sectionTitleClass = "text-[20px] sm:text-[22px] font-semibold tracking-[-0.02em] text-[#0A0A0A]";
+
+function formatSalaryString(value: string) {
+  const digits = value.replace(/[^0-9]/g, "");
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
 
 function Field({ label, error, optional, children }: { label: string; error?: string; optional?: boolean; children: React.ReactNode }) {
   return (
@@ -125,6 +131,7 @@ export default function RecruiterIntakePage() {
     seniority: "",
     headcount: "",
     urgency: "",
+    salaryCurrency: "CAD",
     salaryMin: "",
     salaryMax: "",
     keepSalaryConfidential: false,
@@ -173,6 +180,11 @@ export default function RecruiterIntakePage() {
     return nextErrors;
   };
 
+  const updateSalaryField = (key: "salaryMin" | "salaryMax") => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatSalaryString(event.target.value);
+    setForm((current) => ({ ...current, [key]: formatted }));
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const nextErrors = validate();
@@ -185,43 +197,57 @@ export default function RecruiterIntakePage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const { error } = await supabase.from("join_applications").insert({
-        name: form.contactName,
-        email: form.contactEmail.toLowerCase(),
-        location: form.locationCity || form.locationType,
-        role: form.jobTitle,
-        other_role: form.employmentType,
+      const payload = {
+        contactName: form.contactName,
+        contactEmail: form.contactEmail.toLowerCase(),
+        companyName: form.companyName,
+        companyWebsite: form.companyWebsite,
+        jobTitle: form.jobTitle,
+        employmentType: form.employmentType,
+        locationType: form.locationType,
+        locationCity: form.locationCity,
+        roleDescription: form.roleDescription,
+        responsibilities: form.responsibilities,
+        requiredSkills: form.requiredSkills,
+        niceToHaveSkills: form.niceToHaveSkills,
         experience: form.experience,
-        skills: form.requiredSkills ? form.requiredSkills.split(/,\s*/).filter(Boolean) : [],
-        github: null,
-        linkedin: null,
-        project: form.roleDescription,
-        environment: form.locationType,
-        status: "recruiter_intake",
-        availability: form.urgency,
-        work_type: form.employmentType ? [form.employmentType] : [],
-        salary: form.keepSalaryConfidential ? null : `${form.salaryMin ?? ""}-${form.salaryMax ?? ""}`.replace(/-$/, ""),
-        notes: JSON.stringify({
-          company_name: form.companyName,
-          company_website: form.companyWebsite,
-          responsibilities: form.responsibilities,
-          nice_to_have_skills: form.niceToHaveSkills,
-          interview_rounds: form.interviewRounds,
-          red_flags: form.redFlags,
-          culture: form.culture,
-          visa_sponsorship: form.visaSponsorship,
-          referral_bonus: form.referralBonus,
-          keep_salary_confidential: form.keepSalaryConfidential,
-        }),
+        seniority: form.seniority,
+        headcount: form.headcount,
+        urgency: form.urgency,
+        salaryCurrency: form.salaryCurrency,
+        salaryMin: form.salaryMin.replace(/,/g, ""),
+        salaryMax: form.salaryMax.replace(/,/g, ""),
+        keepSalaryConfidential: form.keepSalaryConfidential,
+        interviewRounds: form.interviewRounds,
+        redFlags: form.redFlags,
+        culture: form.culture,
+        visaSponsorship: form.visaSponsorship,
+        referralBonus: form.referralBonus,
+      };
+
+      const response = await fetch(apiEndpoint("/api/recruiter-intake"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       });
-      if (error) {
-        throw new Error(error.message || "Failed to submit recruiter intake");
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        const message = body?.error || response.statusText || "Failed to submit recruiter intake.";
+        throw new Error(`${response.status}: ${message}`);
       }
 
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+      console.error("Recruiter intake submission error:", error);
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong submitting the form. Please try again."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -317,9 +343,6 @@ export default function RecruiterIntakePage() {
                 <Field label="What skills or qualifications are absolutely required for this role?" error={errors.requiredSkills}>
                   <textarea value={form.requiredSkills} onChange={updateField("requiredSkills")} rows={4} placeholder="List the must-have experience and skills." style={{ ...inputStyle(!!errors.requiredSkills), resize: "vertical", minHeight: 110 }} />
                 </Field>
-                <Field label="Are there any nice-to-have skills that would set a candidate apart?" optional>
-                  <textarea value={form.niceToHaveSkills} onChange={updateField("niceToHaveSkills")} rows={4} placeholder="Optional detail for standout candidates." style={{ ...inputStyle(), resize: "vertical", minHeight: 110 }} />
-                </Field>
                 <div className="grid gap-6 md:grid-cols-2">
                   <Field label="How many years of experience should candidates have?" error={errors.experience}>
                     <SelectField options={["Select experience", ...experienceOptions]} value={form.experience} onChange={(value) => setForm((current) => ({ ...current, experience: value }))} placeholder="Select experience" error={!!errors.experience} />
@@ -340,21 +363,45 @@ export default function RecruiterIntakePage() {
                     <SelectField options={["Select urgency", ...urgencyOptions]} value={form.urgency} onChange={(value) => setForm((current) => ({ ...current, urgency: value }))} placeholder="Select urgency" error={!!errors.urgency} />
                   </Field>
                 </div>
-                <Field label="What's the salary range for this role?" optional>
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start">
-                    <div className="flex-1">
-                      <label className="mb-1.5 block text-[12px] text-[#6B6B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>Min</label>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6B6B6B]">CAD</span>
-                        <input type="number" min="0" value={form.salaryMin} onChange={updateField("salaryMin")} placeholder="50000" style={{ ...inputStyle(), paddingLeft: 48 }} disabled={form.keepSalaryConfidential} />
-                      </div>
+                <Field label="What's the salary range for this role?">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[12px] text-[#6B6B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>Salary currency</span>
+                      <select
+                        value={form.salaryCurrency}
+                        onChange={(event) => setForm((current) => ({ ...current, salaryCurrency: event.target.value }))}
+                        style={{ ...inputStyle(), maxWidth: 140, appearance: "none" as const }}
+                      >
+                        {currencyOptions.map((currency) => (
+                          <option key={currency} value={currency}>{currency}</option>
+                        ))}
+                      </select>
                     </div>
-                    <div className="flex-1">
-                      <label className="mb-1.5 block text-[12px] text-[#6B6B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>Max</label>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6B6B6B]">CAD</span>
-                        <input type="number" min="0" value={form.salaryMax} onChange={updateField("salaryMax")} placeholder="80000" style={{ ...inputStyle(), paddingLeft: 48 }} disabled={form.keepSalaryConfidential} />
-                      </div>
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <Field label="Min">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9,]*"
+                          value={form.salaryMin}
+                          onChange={updateSalaryField("salaryMin")}
+                          placeholder="Enter min salary"
+                          style={inputStyle()}
+                          disabled={form.keepSalaryConfidential}
+                        />
+                      </Field>
+                      <Field label="Max">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9,]*"
+                          value={form.salaryMax}
+                          onChange={updateSalaryField("salaryMax")}
+                          placeholder="Enter max salary"
+                          style={inputStyle()}
+                          disabled={form.keepSalaryConfidential}
+                        />
+                      </Field>
                     </div>
                   </div>
                   <label className="mt-2 flex items-center gap-2 text-[13px] text-[#0A0A0A]" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -365,26 +412,29 @@ export default function RecruiterIntakePage() {
                 <Field label="How many interview rounds do you expect for this role?" error={errors.interviewRounds}>
                   <SelectField options={["Select interview rounds", ...interviewRoundsOptions]} value={form.interviewRounds} onChange={(value) => setForm((current) => ({ ...current, interviewRounds: value }))} placeholder="Select interview rounds" error={!!errors.interviewRounds} />
                 </Field>
-                <Field label="Are there any dealbreakers or red flags we should screen for?" optional>
-                  <textarea value={form.redFlags} onChange={updateField("redFlags")} rows={3} placeholder="Optional red flags or blockers." style={{ ...inputStyle(), resize: "vertical", minHeight: 88 }} />
-                </Field>
               </div>
+            </div>
 
-              <div className="space-y-6">
-                <h2 className={`${sectionTitleClass} mt-8 border-t border-[#ECEBE8] pt-8`} style={{ fontFamily: "'Cormorant Garamond', serif" }}>Optional context</h2>
-                <Field label="Is there anything about your team's culture or working style candidates should know?" optional>
-                  <div className="rounded-[14px] border border-dashed border-[#E8E5DB] bg-[#FCFCFA] p-4 md:p-5">
-                    <textarea value={form.culture} onChange={updateField("culture")} rows={3} placeholder="Optional team context or working style." style={{ ...inputStyle(), resize: "vertical", minHeight: 88, background: "#FCFCFA" }} />
-                  </div>
-                </Field>
-                <div className="grid gap-6 md:grid-cols-2">
-                  <Field label="Does this role offer visa sponsorship?" error={errors.visaSponsorship}>
-                    <SelectField options={["Select option", ...sponsorshipOptions]} value={form.visaSponsorship} onChange={(value) => setForm((current) => ({ ...current, visaSponsorship: value }))} placeholder="Select option" error={!!errors.visaSponsorship} />
-                  </Field>
-                  <Field label="Is this role eligible for an internal referral bonus?" error={errors.referralBonus}>
-                    <SelectField options={["Select option", ...yesNoOptions]} value={form.referralBonus} onChange={(value) => setForm((current) => ({ ...current, referralBonus: value }))} placeholder="Select option" error={!!errors.referralBonus} />
-                  </Field>
+            <div className="space-y-6">
+              <h2 className={`${sectionTitleClass} mt-8 border-t border-[#ECEBE8] pt-8`} style={{ fontFamily: "'Cormorant Garamond', serif" }}>Optional context</h2>
+              <Field label="Is there anything about your team's culture or working style candidates should know?" optional>
+                <div className="rounded-[14px] border border-dashed border-[#E8E5DB] bg-[#FCFCFA] p-4 md:p-5">
+                  <textarea value={form.culture} onChange={updateField("culture")} rows={3} placeholder="Optional team context or working style." style={{ ...inputStyle(), resize: "vertical", minHeight: 88, background: "#FCFCFA" }} />
                 </div>
+              </Field>
+              <Field label="Are there any dealbreakers or red flags we should screen for?" optional>
+                <textarea value={form.redFlags} onChange={updateField("redFlags")} rows={3} placeholder="Optional red flags or blockers." style={{ ...inputStyle(), resize: "vertical", minHeight: 88 }} />
+              </Field>
+              <Field label="Are there any nice-to-have skills that would set a candidate apart?" optional>
+                <textarea value={form.niceToHaveSkills} onChange={updateField("niceToHaveSkills")} rows={4} placeholder="Optional detail for standout candidates." style={{ ...inputStyle(), resize: "vertical", minHeight: 110 }} />
+              </Field>
+              <div className="grid gap-6 md:grid-cols-2">
+                <Field label="Does this role offer visa sponsorship?" error={errors.visaSponsorship}>
+                  <SelectField options={["Select option", ...sponsorshipOptions]} value={form.visaSponsorship} onChange={(value) => setForm((current) => ({ ...current, visaSponsorship: value }))} placeholder="Select option" error={!!errors.visaSponsorship} />
+                </Field>
+                <Field label="Is this role eligible for an internal referral bonus?" error={errors.referralBonus}>
+                  <SelectField options={["Select option", ...yesNoOptions]} value={form.referralBonus} onChange={(value) => setForm((current) => ({ ...current, referralBonus: value }))} placeholder="Select option" error={!!errors.referralBonus} />
+                </Field>
               </div>
             </div>
 
@@ -400,10 +450,10 @@ export default function RecruiterIntakePage() {
               </div>
               <div className="grid gap-6 md:grid-cols-2">
                 <Field label="Company name" error={errors.companyName}>
-                  <input value={form.companyName} onChange={updateField("companyName")} placeholder="Bridgix Labs" style={inputStyle(!!errors.companyName)} />
+                  <input value={form.companyName} onChange={updateField("companyName")} placeholder="Enter company name" style={inputStyle(!!errors.companyName)} />
                 </Field>
                 <Field label="Company website" optional>
-                  <input value={form.companyWebsite} onChange={updateField("companyWebsite")} placeholder="https://bridgix.ai" style={inputStyle()} />
+                  <input value={form.companyWebsite} onChange={updateField("companyWebsite")} placeholder="Enter company website" style={inputStyle()} />
                 </Field>
               </div>
             </div>

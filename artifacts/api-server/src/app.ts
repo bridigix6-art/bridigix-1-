@@ -31,18 +31,14 @@ const corsOrigin = process.env["CORS_ORIGIN"]
   .map((value) => value.trim())
   .filter(Boolean);
 
+const defaultAllowedOrigins = [
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
+  /\.github\.dev$/,
+];
+
 app.use(
   cors({
-    origin: corsOrigin?.length
-      ? corsOrigin
-      : ((origin, callback) => {
-          if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
-            callback(null, true);
-            return;
-          }
-
-          callback(null, false);
-        }),
+    origin: corsOrigin?.length ? corsOrigin : defaultAllowedOrigins,
     credentials: true,
   }),
 );
