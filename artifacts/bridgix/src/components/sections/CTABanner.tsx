@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useLocation } from "wouter";
 import { useInView } from "../../hooks/use-in-view";
 
 function HalfEarthGlobe() {
@@ -167,6 +168,7 @@ function HalfEarthGlobe() {
 
 export function CTABanner() {
   const { ref, isInView } = useInView({ threshold: 0.15 });
+  const [, navigate] = useLocation();
 
   return (
     <>
@@ -235,7 +237,7 @@ export function CTABanner() {
 
                 <div className="flex flex-col sm:flex-row gap-4 items-start">
                   <button
-                    onClick={() => window.location.assign(`${(import.meta.env.BASE_URL || "/").replace(/\/$/, "")}/recruiter-intake`)}
+                    onClick={() => navigate("/recruiter-intake")}
                     className="text-white font-normal text-[14px] cursor-pointer transition-all duration-250 relative overflow-hidden"
                     style={{
                       fontFamily: "'Inter', sans-serif",

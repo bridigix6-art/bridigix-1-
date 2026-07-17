@@ -116,7 +116,7 @@ function NetworkSearchMockup() {
         {candidates.map((c, i) => (
           <div key={i} className="rounded-[10px] p-2.5 flex items-center gap-2.5" style={{ background: "#FFFFFF", border: "1px solid #EBEBEA", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             <div className="w-[30px] h-[30px] rounded-full overflow-hidden flex-shrink-0" style={{ boxShadow: `0 0 0 2px white, 0 0 0 3px ${c.color}` }}>
-              <img src={c.photo} alt={c.name} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+              <img src={c.photo} alt={c.name} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", display: "block" }} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-0.5">
@@ -147,7 +147,7 @@ function InterviewMockup() {
       <div className="px-4 pt-3.5 pb-3 flex-shrink-0" style={{ background: "linear-gradient(135deg, rgba(26,122,74,0.04), rgba(52,211,153,0.02))", borderBottom: "1px solid #EBEBEA" }}>
         <div className="flex items-center gap-2.5">
           <div className="w-[36px] h-[36px] rounded-full overflow-hidden flex-shrink-0" style={{ boxShadow: "0 0 0 2px white, 0 0 0 3px #1A7A4A" }}>
-            <img src={nanaPhoto} alt="James K." style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+            <img src={nanaPhoto} alt="James K." style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", display: "block" }} />
           </div>
           <div className="flex-1">
             <div className="text-[11px] font-medium text-[#0A0A0A]">James K.</div>
@@ -204,7 +204,7 @@ function ShortlistMockup() {
           <div key={i} className="flex items-center gap-2.5 rounded-[10px] p-2.5" style={{ background: "#FFFFFF", border: "1px solid #EBEBEA", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             <div className="w-[3px] self-stretch rounded-full flex-shrink-0" style={{ background: p.bar }} />
             <div className="w-[26px] h-[26px] rounded-full overflow-hidden flex-shrink-0" style={{ boxShadow: `0 0 0 2px white, 0 0 0 3px ${p.accent}` }}>
-              <img src={p.photo} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+              <img src={p.photo} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", display: "block" }} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-[10px] font-medium text-[#0A0A0A]">{p.name}</div>

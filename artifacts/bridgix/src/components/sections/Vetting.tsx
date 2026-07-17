@@ -161,9 +161,11 @@ export function Vetting() {
                     ? signatureGradient
                     : "linear-gradient(140deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)",
                   opacity: isBlurred ? 0.55 : 1,
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  transition: "box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease",
                   transform: isFocused ? "scale(1.01)" : isBlurred ? "scale(0.995)" : "scale(1)",
-                  boxShadow: isFocused ? "0 18px 45px rgba(0,0,0,0.22)" : "none",
+                  boxShadow: isFocused ? "0 0 16px rgba(34,197,94,0.22)" : "0 0 0 rgba(34,197,94,0)",
+                  WebkitTapHighlightColor: "transparent",
+                  outline: "none",
                 }}
               >
                 <div
