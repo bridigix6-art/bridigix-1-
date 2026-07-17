@@ -157,24 +157,21 @@ export function Vetting() {
                 style={{
                   borderRadius: "18px",
                   padding: "1px",
-                  background: isFocused
-                    ? signatureGradient
-                    : "linear-gradient(140deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)",
+                  background: "linear-gradient(140deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)",
                   opacity: isBlurred ? 0.55 : 1,
-                  transition: "box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease",
-                  transform: isFocused ? "scale(1.01)" : isBlurred ? "scale(0.995)" : "scale(1)",
-                  boxShadow: isFocused ? "0 0 16px rgba(34,197,94,0.22)" : "0 0 0 rgba(34,197,94,0)",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease",
+                  transform: isFocused ? "scale(1.02) translateY(-4px)" : isBlurred ? "scale(0.995)" : "scale(1)",
+                  boxShadow: isFocused ? "0 8px 24px rgba(0, 0, 0, 0.25)" : "0 0 0 rgba(0, 0, 0, 0)",
                   WebkitTapHighlightColor: "transparent",
                   outline: "none",
+                  touchAction: "manipulation",
                 }}
               >
                 <div
                   className="rounded-[17px] h-full flex flex-col p-[30px] relative overflow-hidden"
                   style={{
-                    background: isFocused
-                      ? "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)"
-                      : "rgba(255,255,255,0.025)",
-                    boxShadow: isFocused ? "0 24px 60px rgba(0,0,0,0.4)" : "none",
+                    background: "rgba(255,255,255,0.025)",
+                    boxShadow: "none",
                   }}
                 >
                   {/* Top gradient accent bar */}

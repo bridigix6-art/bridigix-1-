@@ -269,21 +269,26 @@ export function Hero() {
 
                     <div className="flex items-center gap-3">
                       <div
-                        className="rounded-full p-[2px]"
+                        className="rounded-full overflow-hidden"
                         style={{
+                          width: 46,
+                          height: 46,
+                          padding: 2,
                           background: `linear-gradient(135deg, ${card.ringColor}, rgba(255,255,255,0.85))`,
                           boxShadow: `0 0 0 1px rgba(255,255,255,0.9), 0 8px 20px rgba(0,0,0,0.08)`,
+                          flexShrink: 0,
                         }}
                       >
                         <img
                           src={card.photo}
                           alt={card.name}
                           style={{
-                            width: 46, height: 46,
+                            width: "100%",
+                            height: "100%",
                             borderRadius: "50%",
                             objectFit: "cover",
                             objectPosition: "center",
-                            flexShrink: 0,
+                            display: "block",
                             background: "linear-gradient(135deg, rgba(245,200,66,0.12), rgba(26,122,74,0.12))",
                           }}
                         />
