@@ -5,7 +5,6 @@ import { useInView } from "../../hooks/use-in-view";
 import jonathanPhoto from "@assets/pexels-salvador-olague-682304070-18032391_1780481869516.jpg";
 import hennaPhoto from "@assets/pexels-mikhail-nilov-8730389_1780508877001_1780625194226.jpg";
 import sofiaPhoto from "@assets/pexels-jessica-stefany-m-1002024697-31512052_1780456563453.jpg";
-import blobSticker from "@assets/gradient-colors-with-blurry-effect-abstract-shape-element-png__1780481869559.jpg";
 
 function useCountUp(target: number, trigger: boolean) {
   const [val, setVal] = useState(0);
@@ -237,7 +236,7 @@ export function Hero() {
                 filter: "blur(2px)",
               }}
             >
-              <img src={blobSticker} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+              <img src="/hero-blob.svg" alt="" style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "crisp-edges" }} />
             </div>
 
             {heroCards.map((card, i) => {
