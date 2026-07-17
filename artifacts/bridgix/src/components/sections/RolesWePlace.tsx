@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useInView } from "../../hooks/use-in-view";
+import halftoneImage from "@assets/halftone-bg_1780625194240.jpg";
 
 const roles = [
   { label: "Backend Engineers" },
@@ -31,7 +32,7 @@ export function RolesWePlace() {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          backgroundImage: "url('/halftone-pattern.svg')",
+          backgroundImage: `url(${halftoneImage})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
